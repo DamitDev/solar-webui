@@ -3,7 +3,7 @@
 replicaCount: 1
 
 image:
-  repository: imgrepo.damit.cloud/aiops/solar-webui
+  repository: imgrepo.damit.hu/aiops/solar-webui
   tag: latest
   pullPolicy: Always
 

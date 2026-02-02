@@ -25,9 +25,15 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 
+# Create non-root user
+RUN adduser -D -u 1000 appuser
+
 # Copy built assets and server
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/server ./server
+COPY --from=builder --chown=appuser:appuser /app/dist ./dist
+COPY --from=builder --chown=appuser:appuser /app/server ./server
+
+# Switch to non-root user
+USER appuser
 
 # Set port from build arg
 ARG PORT=8080
