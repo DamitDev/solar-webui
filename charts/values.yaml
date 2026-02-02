@@ -1,0 +1,59 @@
+# Default values for solar-webui
+
+replicaCount: 1
+
+image:
+  repository: imgrepo.damit.cloud/aiops/solar-webui
+  tag: latest
+  pullPolicy: Always
+
+nameOverride: ""
+fullnameOverride: ""
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 80
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  host: ""
+  tls: []
+
+env:
+  TZ: "Europe/Budapest"
+  SOLAR_CONTROL_URL: "http://solar-control"
+  PORT: "80"
+
+secret:
+  existingSecret: ""
+  keys:
+    - SOLAR_CONTROL_API_KEY
+
+resources:
+  requests:
+    cpu: "10m"
+    memory: "32Mi"
+  limits:
+    cpu: "100m"
+    memory: "128Mi"
+
+probes:
+  readiness:
+    enabled: true
+    path: /health
+    port: 80
+    initialDelaySeconds: 10
+    periodSeconds: 15
+  liveness:
+    enabled: true
+    path: /health
+    port: 80
+    initialDelaySeconds: 30
+    periodSeconds: 30
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

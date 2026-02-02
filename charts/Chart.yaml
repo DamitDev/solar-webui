@@ -1,0 +1,13 @@
+apiVersion: v2
+name: solar-webui
+description: Solar WebUI - Web interface for Solar Control management
+type: application
+version: 0.1.0
+appVersion: "2.0.6"
+maintainers:
+  - name: AIOps Team
+keywords:
+  - aiops
+  - solar
+  - webui
+  - frontend
