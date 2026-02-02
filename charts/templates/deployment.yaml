@@ -30,6 +30,7 @@ spec:
       {{- end }}
       securityContext:
         runAsNonRoot: true
+            runAsUser: 1000
         seccompProfile:
           type: RuntimeDefault
       containers:
@@ -42,6 +43,7 @@ spec:
               drop:
                 - ALL
             runAsNonRoot: true
+            runAsUser: 1000
             readOnlyRootFilesystem: false
           envFrom:
             - configMapRef:
