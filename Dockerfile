@@ -25,15 +25,13 @@ ENV NODE_ENV=production
 COPY package*.json ./
 RUN npm ci --omit=dev
 
-# Create non-root user
-RUN adduser -D -u 1000 appuser
-
+# Use the existing node user (UID 1000 in alpine)
 # Copy built assets and server
-COPY --from=builder --chown=appuser:appuser /app/dist ./dist
-COPY --from=builder --chown=appuser:appuser /app/server ./server
+COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/server ./server
 
 # Switch to non-root user
-USER appuser
+USER node
 
 # Set port from build arg
 ARG PORT=8080
