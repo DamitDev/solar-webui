@@ -1,10 +1,25 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Instance, InstanceConfig, MemoryInfo, getModelCategory, ModelCategory } from '@/api/types';
 import { cn, getStatusColor, formatDate, getMemoryColor, formatMemoryUsage } from '@/lib/utils';
 import { InstanceCard } from './InstanceCard';
-import { InstanceTable } from './InstanceTable';
 import { AddInstanceModal } from './AddInstanceModal';
-import { Server, Trash2, Plus, MessageSquare, Brain, Tags, Binary, Search, ChevronUp, ChevronDown } from 'lucide-react';
+import { Server, Trash2, Plus, MessageSquare, Brain, Tags, Binary, Search, GripVertical } from 'lucide-react';
+import { useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  rectSortingStrategy,
+} from '@dnd-kit/sortable';
 
 interface HostCardProps {
   host: {
@@ -17,13 +32,7 @@ interface HostCardProps {
     memory?: MemoryInfo;
     instances: Instance[];
   };
-  index?: number;
-  totalHosts?: number;
-  viewMode?: 'cards' | 'table';
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
-  onMoveInstanceUp?: (instanceId: string) => void;
-  onMoveInstanceDown?: (instanceId: string) => void;
+  onReorderInstance: (hostId: string, activeId: string, overId: string) => void;
   onStartInstance: (hostId: string, instanceId: string) => Promise<void>;
   onStopInstance: (hostId: string, instanceId: string) => Promise<void>;
   onRestartInstance: (hostId: string, instanceId: string) => Promise<void>;
@@ -63,15 +72,59 @@ const getCategoryLabel = (category: ModelCategory): string => {
   }
 };
 
+/** Wrapper to make each InstanceCard sortable */
+function SortableInstanceCard({
+  instance,
+  hostId,
+  onStart,
+  onStop,
+  onRestart,
+  onUpdate,
+  onDelete,
+}: {
+  instance: Instance;
+  hostId: string;
+  onStart: (hostId: string, instanceId: string) => Promise<void>;
+  onStop: (hostId: string, instanceId: string) => Promise<void>;
+  onRestart: (hostId: string, instanceId: string) => Promise<void>;
+  onUpdate: (hostId: string, instanceId: string, config: InstanceConfig) => Promise<void>;
+  onDelete: (hostId: string, instanceId: string) => Promise<void>;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: instance.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes}>
+      <InstanceCard
+        instance={instance}
+        hostId={hostId}
+        onStart={onStart}
+        onStop={onStop}
+        onRestart={onRestart}
+        onUpdate={onUpdate}
+        onDelete={onDelete}
+        dragListeners={listeners}
+      />
+    </div>
+  );
+}
+
 export function HostCard({
   host,
-  index,
-  totalHosts,
-  viewMode = 'cards',
-  onMoveUp,
-  onMoveDown,
-  onMoveInstanceUp,
-  onMoveInstanceDown,
+  onReorderInstance,
   onStartInstance,
   onStopInstance,
   onRestartInstance,
@@ -83,7 +136,36 @@ export function HostCard({
   const [showAddModal, setShowAddModal] = useState(false);
   const runningCount = host.instances.filter((i) => i.status === 'running').length;
 
-  // Compute model category counts (generation, embedding, classification, reranker)
+  // Make the host card itself sortable (for host reordering)
+  const {
+    attributes: hostAttributes,
+    listeners: hostListeners,
+    setNodeRef: setHostNodeRef,
+    transform: hostTransform,
+    transition: hostTransition,
+    isDragging: hostIsDragging,
+  } = useSortable({ id: host.id });
+
+  const hostStyle = {
+    transform: CSS.Transform.toString(hostTransform),
+    transition: hostTransition,
+    opacity: hostIsDragging ? 0.5 : 1,
+    zIndex: hostIsDragging ? 50 : undefined,
+  };
+
+  // Instance DnD
+  const instanceSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleInstanceDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    onReorderInstance(host.id, active.id as string, over.id as string);
+  }, [host.id, onReorderInstance]);
+
+  // Compute model category counts
   const categoryCounts = useMemo(() => {
     const counts: Record<ModelCategory, { total: number; running: number }> = {
       generation: { total: 0, running: 0 },
@@ -103,41 +185,29 @@ export function HostCard({
     return counts;
   }, [host.instances]);
 
-  // Filter categories with instances
   const activeCategories = (Object.entries(categoryCounts) as [ModelCategory, { total: number; running: number }][])
     .filter(([, { total }]) => total > 0);
 
-  const isFirst = index === 0;
-  const isLast = totalHosts !== undefined && index === totalHosts - 1;
-
   return (
     <>
-    <div className="bg-nord-1 rounded-lg shadow-lg overflow-hidden">
+    <div
+      ref={setHostNodeRef}
+      style={hostStyle}
+      {...hostAttributes}
+      className="bg-nord-1 rounded-lg shadow-lg overflow-hidden"
+    >
       {/* Host Header */}
       <div className="bg-gradient-to-r from-nord-10 to-nord-9 p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            {/* Move up/down buttons */}
-            {onMoveUp && onMoveDown && (
-              <div className="flex flex-col gap-0.5">
-                <button
-                  onClick={onMoveUp}
-                  disabled={isFirst}
-                  className="p-0.5 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-6"
-                  title="Move host up"
-                >
-                  <ChevronUp size={16} />
-                </button>
-                <button
-                  onClick={onMoveDown}
-                  disabled={isLast}
-                  className="p-0.5 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-6"
-                  title="Move host down"
-                >
-                  <ChevronDown size={16} />
-                </button>
-              </div>
-            )}
+            {/* Drag handle for host reordering */}
+            <button
+              {...hostListeners}
+              className="p-1 rounded cursor-grab active:cursor-grabbing hover:bg-white hover:bg-opacity-20 transition-colors text-nord-6 touch-none"
+              title="Drag to reorder host"
+            >
+              <GripVertical size={20} />
+            </button>
             <Server size={24} />
             <div>
               <h2 className="text-xl font-bold text-nord-6">{host.name}</h2>
@@ -168,7 +238,6 @@ export function HostCard({
             <span>
               {runningCount} / {host.instances.length} instances running
             </span>
-            {/* Model category summary pills */}
             {activeCategories.length > 0 && (
               <div className="flex items-center gap-2">
                 {activeCategories.map(([category, { total, running }]) => (
@@ -220,7 +289,7 @@ export function HostCard({
         )}
       </div>
 
-      {/* Instances */}
+      {/* Instances - Cards with drag-and-drop */}
       <div className="p-4">
         {host.instances.length === 0 ? (
           <div className="text-center py-8 text-nord-4">
@@ -233,55 +302,32 @@ export function HostCard({
               Add First Instance
             </button>
           </div>
-        ) : viewMode === 'table' ? (
-          <InstanceTable
-            instances={host.instances}
-            hostId={host.id}
-            onStart={onStartInstance}
-            onStop={onStopInstance}
-            onRestart={onRestartInstance}
-            onUpdate={onUpdateInstance}
-            onDelete={onDeleteInstance}
-            onMoveUp={onMoveInstanceUp}
-            onMoveDown={onMoveInstanceDown}
-          />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {host.instances.map((instance, idx) => (
-              <div key={instance.id} className="relative">
-                {/* Instance move buttons (card view) */}
-                {onMoveInstanceUp && onMoveInstanceDown && (
-                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 -translate-x-full flex flex-col gap-0.5 z-10">
-                    <button
-                      onClick={() => onMoveInstanceUp(instance.id)}
-                      disabled={idx === 0}
-                      className="p-0.5 rounded bg-nord-3 hover:bg-nord-10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-4 hover:text-nord-6"
-                      title="Move instance up"
-                    >
-                      <ChevronUp size={14} />
-                    </button>
-                    <button
-                      onClick={() => onMoveInstanceDown(instance.id)}
-                      disabled={idx === host.instances.length - 1}
-                      className="p-0.5 rounded bg-nord-3 hover:bg-nord-10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-4 hover:text-nord-6"
-                      title="Move instance down"
-                    >
-                      <ChevronDown size={14} />
-                    </button>
-                  </div>
-                )}
-                <InstanceCard
-                  instance={instance}
-                  hostId={host.id}
-                  onStart={onStartInstance}
-                  onStop={onStopInstance}
-                  onRestart={onRestartInstance}
-                  onUpdate={onUpdateInstance}
-                  onDelete={onDeleteInstance}
-                />
+          <DndContext
+            sensors={instanceSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleInstanceDragEnd}
+          >
+            <SortableContext
+              items={host.instances.map((i) => i.id)}
+              strategy={rectSortingStrategy}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {host.instances.map((instance) => (
+                  <SortableInstanceCard
+                    key={instance.id}
+                    instance={instance}
+                    hostId={host.id}
+                    onStart={onStartInstance}
+                    onStop={onStopInstance}
+                    onRestart={onRestartInstance}
+                    onUpdate={onUpdateInstance}
+                    onDelete={onDeleteInstance}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </div>

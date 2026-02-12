@@ -1,10 +1,25 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useInstances } from '@/hooks/useInstances';
 import { HostCard } from './HostCard';
+import { UnifiedTable } from './UnifiedTable';
 import { AddHostModal } from './AddHostModal';
 import { Plus, RefreshCw, AlertCircle, Server, LayoutGrid, Table2 } from 'lucide-react';
 import solarClient from '@/api/client';
 import { cn } from '@/lib/utils';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 
 type ViewMode = 'cards' | 'table';
 
@@ -27,8 +42,8 @@ export function Dashboard() {
     startInstance,
     stopInstance,
     restartInstance,
-    moveHost,
-    moveInstance,
+    reorderHost,
+    reorderInstance,
   } = useInstances();
   
   const [showAddHost, setShowAddHost] = useState(false);
@@ -89,6 +104,18 @@ export function Dashboard() {
       alert('Failed to delete instance');
     }
   };
+
+  // DnD sensors with activation constraint to distinguish drag from click
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleHostDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    reorderHost(active.id as string, over.id as string);
+  }, [reorderHost]);
 
   if (loading && hosts.length === 0) {
     return (
@@ -190,29 +217,45 @@ export function Dashboard() {
               Add Host
             </button>
           </div>
+        ) : viewMode === 'table' ? (
+          /* Unified table view */
+          <UnifiedTable
+            hosts={hosts}
+            onStartInstance={startInstance}
+            onStopInstance={stopInstance}
+            onRestartInstance={restartInstance}
+            onUpdateInstance={handleUpdateInstance}
+            onDeleteInstance={handleDeleteInstance}
+          />
         ) : (
-          <div className="space-y-6">
-            {hosts.map((host, index) => (
-              <HostCard
-                key={host.id}
-                host={host}
-                index={index}
-                totalHosts={hosts.length}
-                viewMode={viewMode}
-                onMoveUp={() => moveHost(host.id, 'up')}
-                onMoveDown={() => moveHost(host.id, 'down')}
-                onMoveInstanceUp={(instanceId) => moveInstance(host.id, instanceId, 'up')}
-                onMoveInstanceDown={(instanceId) => moveInstance(host.id, instanceId, 'down')}
-                onStartInstance={startInstance}
-                onStopInstance={stopInstance}
-                onRestartInstance={restartInstance}
-                onUpdateInstance={handleUpdateInstance}
-                onDeleteInstance={handleDeleteInstance}
-                onCreateInstance={handleCreateInstance}
-                onDeleteHost={handleDeleteHost}
-              />
-            ))}
-          </div>
+          /* Cards view with drag-and-drop host reordering */
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleHostDragEnd}
+          >
+            <SortableContext
+              items={hosts.map((h) => h.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-6">
+                {hosts.map((host) => (
+                  <HostCard
+                    key={host.id}
+                    host={host}
+                    onReorderInstance={(hostId, activeId, overId) => reorderInstance(hostId, activeId, overId)}
+                    onStartInstance={startInstance}
+                    onStopInstance={stopInstance}
+                    onRestartInstance={restartInstance}
+                    onUpdateInstance={handleUpdateInstance}
+                    onDeleteInstance={handleDeleteInstance}
+                    onCreateInstance={handleCreateInstance}
+                    onDeleteHost={handleDeleteHost}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </main>
 

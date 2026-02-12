@@ -136,30 +136,31 @@ export function useInstances(refreshInterval = 30000) {
     }
   }, [fetchData]);
 
-  // --- Reorder functions ---
+  // --- Reorder functions (drag-and-drop based) ---
 
-  const moveHost = useCallback((hostId: string, direction: 'up' | 'down') => {
+  /** Move a host so it lands at the position of another host (by ID). */
+  const reorderHost = useCallback((activeId: string, overId: string) => {
     setHostOrder((prev) => {
-      // Build a full order list that includes all current hosts
       const currentIds = hosts.map((h) => h.id);
       const fullOrder = applySavedOrder(
         currentIds.map((id) => ({ id })),
         prev
       ).map((x) => x.id);
 
-      const idx = fullOrder.indexOf(hostId);
-      if (idx === -1) return prev;
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= fullOrder.length) return prev;
+      const oldIdx = fullOrder.indexOf(activeId);
+      const newIdx = fullOrder.indexOf(overId);
+      if (oldIdx === -1 || newIdx === -1) return prev;
 
-      const newOrder = [...fullOrder];
-      [newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]];
-      writeHostOrder(newOrder);
-      return newOrder;
+      const updated = [...fullOrder];
+      updated.splice(oldIdx, 1);
+      updated.splice(newIdx, 0, activeId);
+      writeHostOrder(updated);
+      return updated;
     });
   }, [hosts]);
 
-  const moveInstance = useCallback((hostId: string, instanceId: string, direction: 'up' | 'down') => {
+  /** Move an instance within a host so it lands at the position of another instance (by ID). */
+  const reorderInstance = useCallback((hostId: string, activeId: string, overId: string) => {
     setInstanceOrders((prev) => {
       const host = hosts.find((h) => h.id === hostId);
       if (!host) return prev;
@@ -171,15 +172,15 @@ export function useInstances(refreshInterval = 30000) {
         savedOrder
       ).map((x) => x.id);
 
-      const idx = fullOrder.indexOf(instanceId);
-      if (idx === -1) return prev;
-      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
-      if (swapIdx < 0 || swapIdx >= fullOrder.length) return prev;
+      const oldIdx = fullOrder.indexOf(activeId);
+      const newIdx = fullOrder.indexOf(overId);
+      if (oldIdx === -1 || newIdx === -1) return prev;
 
-      const newOrder = [...fullOrder];
-      [newOrder[idx], newOrder[swapIdx]] = [newOrder[swapIdx], newOrder[idx]];
-      writeInstanceOrder(hostId, newOrder);
-      return { ...prev, [hostId]: newOrder };
+      const updated = [...fullOrder];
+      updated.splice(oldIdx, 1);
+      updated.splice(newIdx, 0, activeId);
+      writeInstanceOrder(hostId, updated);
+      return { ...prev, [hostId]: updated };
     });
   }, [hosts]);
 
@@ -216,7 +217,7 @@ export function useInstances(refreshInterval = 30000) {
     startInstance,
     stopInstance,
     restartInstance,
-    moveHost,
-    moveInstance,
+    reorderHost,
+    reorderInstance,
   };
 }

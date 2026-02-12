@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Square, RotateCw, FileText, Trash2, Edit, MessageSquare, Tags, Binary, Search } from 'lucide-react';
+import { Play, Square, RotateCw, FileText, Trash2, Edit, MessageSquare, Tags, Binary, Search, GripVertical } from 'lucide-react';
 import { 
   Instance, 
   InstanceConfig, 
@@ -28,6 +28,7 @@ interface InstanceCardProps {
   onRestart: (hostId: string, instanceId: string) => Promise<void>;
   onUpdate: (hostId: string, instanceId: string, config: InstanceConfig) => Promise<void>;
   onDelete: (hostId: string, instanceId: string) => Promise<void>;
+  dragListeners?: Record<string, Function>;
 }
 
 const BackendIcon = ({ config }: { config: InstanceConfig }) => {
@@ -65,6 +66,7 @@ export function InstanceCard({
   onRestart,
   onUpdate,
   onDelete,
+  dragListeners,
 }: InstanceCardProps) {
   const [loading, setLoading] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
@@ -219,13 +221,25 @@ export function InstanceCard({
       <div className="bg-nord-2 rounded-lg shadow-lg p-4 hover:shadow-xl transition-shadow border border-nord-3">
         {/* Header */}
         <div className="flex items-start justify-between gap-2 mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-semibold text-lg truncate text-nord-6">{instance.config.alias}</h3>
+          <div className="flex items-start gap-2 flex-1 min-w-0">
+            {/* Drag handle */}
+            {dragListeners && (
+              <button
+                {...dragListeners}
+                className="p-0.5 mt-1 rounded cursor-grab active:cursor-grabbing hover:bg-nord-3 transition-colors text-nord-4 hover:text-nord-6 touch-none flex-shrink-0"
+                title="Drag to reorder"
+              >
+                <GripVertical size={16} />
+              </button>
+            )}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="font-semibold text-lg truncate text-nord-6">{instance.config.alias}</h3>
+              </div>
+              <p className="text-sm text-nord-4 truncate" title={getModelDisplay()}>
+                {getModelDisplay()}
+              </p>
             </div>
-            <p className="text-sm text-nord-4 truncate" title={getModelDisplay()}>
-              {getModelDisplay()}
-            </p>
           </div>
           <div className="flex items-center gap-1 flex-shrink-0 flex-wrap justify-end">
             {/* Backend Type Badge */}
