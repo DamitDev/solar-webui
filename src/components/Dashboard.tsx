@@ -2,8 +2,21 @@ import { useState } from 'react';
 import { useInstances } from '@/hooks/useInstances';
 import { HostCard } from './HostCard';
 import { AddHostModal } from './AddHostModal';
-import { Plus, RefreshCw, AlertCircle, Server } from 'lucide-react';
+import { Plus, RefreshCw, AlertCircle, Server, LayoutGrid, Table2 } from 'lucide-react';
 import solarClient from '@/api/client';
+import { cn } from '@/lib/utils';
+
+type ViewMode = 'cards' | 'table';
+
+const VIEW_MODE_KEY = 'solar_view_mode';
+
+function readViewMode(): ViewMode {
+  try {
+    const raw = localStorage.getItem(VIEW_MODE_KEY);
+    if (raw === 'cards' || raw === 'table') return raw;
+  } catch { /* ignore */ }
+  return 'cards';
+}
 
 export function Dashboard() {
   const {
@@ -14,10 +27,18 @@ export function Dashboard() {
     startInstance,
     stopInstance,
     restartInstance,
+    moveHost,
+    moveInstance,
   } = useInstances();
   
   const [showAddHost, setShowAddHost] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>(readViewMode);
+
+  const handleViewModeToggle = (mode: ViewMode) => {
+    setViewMode(mode);
+    localStorage.setItem(VIEW_MODE_KEY, mode);
+  };
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -92,7 +113,34 @@ export function Dashboard() {
                 Multi-Host LLM Manager
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
+              {/* View mode toggle */}
+              <div className="flex bg-nord-3 rounded-lg p-0.5">
+                <button
+                  onClick={() => handleViewModeToggle('cards')}
+                  className={cn(
+                    'flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors',
+                    viewMode === 'cards'
+                      ? 'bg-nord-10 text-nord-6'
+                      : 'text-nord-4 hover:text-nord-6'
+                  )}
+                  title="Card view"
+                >
+                  <LayoutGrid size={16} />
+                </button>
+                <button
+                  onClick={() => handleViewModeToggle('table')}
+                  className={cn(
+                    'flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors',
+                    viewMode === 'table'
+                      ? 'bg-nord-10 text-nord-6'
+                      : 'text-nord-4 hover:text-nord-6'
+                  )}
+                  title="Table view"
+                >
+                  <Table2 size={16} />
+                </button>
+              </div>
               <button
                 onClick={handleRefresh}
                 disabled={refreshing}
@@ -144,10 +192,17 @@ export function Dashboard() {
           </div>
         ) : (
           <div className="space-y-6">
-            {hosts.map((host) => (
+            {hosts.map((host, index) => (
               <HostCard
                 key={host.id}
                 host={host}
+                index={index}
+                totalHosts={hosts.length}
+                viewMode={viewMode}
+                onMoveUp={() => moveHost(host.id, 'up')}
+                onMoveDown={() => moveHost(host.id, 'down')}
+                onMoveInstanceUp={(instanceId) => moveInstance(host.id, instanceId, 'up')}
+                onMoveInstanceDown={(instanceId) => moveInstance(host.id, instanceId, 'down')}
                 onStartInstance={startInstance}
                 onStopInstance={stopInstance}
                 onRestartInstance={restartInstance}
@@ -171,4 +226,3 @@ export function Dashboard() {
     </div>
   );
 }
-

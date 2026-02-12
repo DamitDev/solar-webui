@@ -2,8 +2,9 @@ import { useState, useMemo } from 'react';
 import { Instance, InstanceConfig, MemoryInfo, getModelCategory, ModelCategory } from '@/api/types';
 import { cn, getStatusColor, formatDate, getMemoryColor, formatMemoryUsage } from '@/lib/utils';
 import { InstanceCard } from './InstanceCard';
+import { InstanceTable } from './InstanceTable';
 import { AddInstanceModal } from './AddInstanceModal';
-import { Server, Trash2, Plus, MessageSquare, Brain, Tags, Binary, Search } from 'lucide-react';
+import { Server, Trash2, Plus, MessageSquare, Brain, Tags, Binary, Search, ChevronUp, ChevronDown } from 'lucide-react';
 
 interface HostCardProps {
   host: {
@@ -16,6 +17,13 @@ interface HostCardProps {
     memory?: MemoryInfo;
     instances: Instance[];
   };
+  index?: number;
+  totalHosts?: number;
+  viewMode?: 'cards' | 'table';
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+  onMoveInstanceUp?: (instanceId: string) => void;
+  onMoveInstanceDown?: (instanceId: string) => void;
   onStartInstance: (hostId: string, instanceId: string) => Promise<void>;
   onStopInstance: (hostId: string, instanceId: string) => Promise<void>;
   onRestartInstance: (hostId: string, instanceId: string) => Promise<void>;
@@ -57,6 +65,13 @@ const getCategoryLabel = (category: ModelCategory): string => {
 
 export function HostCard({
   host,
+  index,
+  totalHosts,
+  viewMode = 'cards',
+  onMoveUp,
+  onMoveDown,
+  onMoveInstanceUp,
+  onMoveInstanceDown,
   onStartInstance,
   onStopInstance,
   onRestartInstance,
@@ -92,6 +107,9 @@ export function HostCard({
   const activeCategories = (Object.entries(categoryCounts) as [ModelCategory, { total: number; running: number }][])
     .filter(([, { total }]) => total > 0);
 
+  const isFirst = index === 0;
+  const isLast = totalHosts !== undefined && index === totalHosts - 1;
+
   return (
     <>
     <div className="bg-nord-1 rounded-lg shadow-lg overflow-hidden">
@@ -99,6 +117,27 @@ export function HostCard({
       <div className="bg-gradient-to-r from-nord-10 to-nord-9 p-4">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
+            {/* Move up/down buttons */}
+            {onMoveUp && onMoveDown && (
+              <div className="flex flex-col gap-0.5">
+                <button
+                  onClick={onMoveUp}
+                  disabled={isFirst}
+                  className="p-0.5 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-6"
+                  title="Move host up"
+                >
+                  <ChevronUp size={16} />
+                </button>
+                <button
+                  onClick={onMoveDown}
+                  disabled={isLast}
+                  className="p-0.5 rounded hover:bg-white hover:bg-opacity-20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-6"
+                  title="Move host down"
+                >
+                  <ChevronDown size={16} />
+                </button>
+              </div>
+            )}
             <Server size={24} />
             <div>
               <h2 className="text-xl font-bold text-nord-6">{host.name}</h2>
@@ -194,19 +233,53 @@ export function HostCard({
               Add First Instance
             </button>
           </div>
+        ) : viewMode === 'table' ? (
+          <InstanceTable
+            instances={host.instances}
+            hostId={host.id}
+            onStart={onStartInstance}
+            onStop={onStopInstance}
+            onRestart={onRestartInstance}
+            onUpdate={onUpdateInstance}
+            onDelete={onDeleteInstance}
+            onMoveUp={onMoveInstanceUp}
+            onMoveDown={onMoveInstanceDown}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {host.instances.map((instance) => (
-              <InstanceCard
-                key={instance.id}
-                instance={instance}
-                hostId={host.id}
-                onStart={onStartInstance}
-                onStop={onStopInstance}
-                onRestart={onRestartInstance}
-                onUpdate={onUpdateInstance}
-                onDelete={onDeleteInstance}
-              />
+            {host.instances.map((instance, idx) => (
+              <div key={instance.id} className="relative">
+                {/* Instance move buttons (card view) */}
+                {onMoveInstanceUp && onMoveInstanceDown && (
+                  <div className="absolute -left-1 top-1/2 -translate-y-1/2 -translate-x-full flex flex-col gap-0.5 z-10">
+                    <button
+                      onClick={() => onMoveInstanceUp(instance.id)}
+                      disabled={idx === 0}
+                      className="p-0.5 rounded bg-nord-3 hover:bg-nord-10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-4 hover:text-nord-6"
+                      title="Move instance up"
+                    >
+                      <ChevronUp size={14} />
+                    </button>
+                    <button
+                      onClick={() => onMoveInstanceDown(instance.id)}
+                      disabled={idx === host.instances.length - 1}
+                      className="p-0.5 rounded bg-nord-3 hover:bg-nord-10 transition-colors disabled:opacity-30 disabled:cursor-not-allowed text-nord-4 hover:text-nord-6"
+                      title="Move instance down"
+                    >
+                      <ChevronDown size={14} />
+                    </button>
+                  </div>
+                )}
+                <InstanceCard
+                  instance={instance}
+                  hostId={host.id}
+                  onStart={onStartInstance}
+                  onStop={onStopInstance}
+                  onRestart={onRestartInstance}
+                  onUpdate={onUpdateInstance}
+                  onDelete={onDeleteInstance}
+                />
+              </div>
             ))}
           </div>
         )}
