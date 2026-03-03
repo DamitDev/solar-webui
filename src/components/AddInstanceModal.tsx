@@ -80,6 +80,7 @@ const getDefaultConfig = (primary: PrimaryBackend, mode: string): Partial<Instan
       min_p: 0,
       ctx_size: 131072,
       chat_template_file: '',
+      chat_template_kwargs: '',
       special: false,
       ot: '',
       model_type: mode as LlamaCppMode,
@@ -394,6 +395,26 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                         placeholder="/path/to/template.jinja"
                         className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                       />
+                    </div>
+                  )}
+
+                  {/* Chat Template Kwargs - only for LLM mode */}
+                  {llamaCppMode === 'llm' && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-nord-4 mb-1">
+                        Chat Template Kwargs (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="chat_template_kwargs"
+                        value={(formData as Partial<LlamaCppConfig>).chat_template_kwargs || ''}
+                        onChange={handleChange}
+                        placeholder='{"enable_thinking":true}'
+                        className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent font-mono text-sm"
+                      />
+                      <p className="text-xs text-nord-4 mt-1">
+                        JSON string passed to llama-server as <code>--chat-template-kwargs</code>.
+                      </p>
                     </div>
                   )}
 

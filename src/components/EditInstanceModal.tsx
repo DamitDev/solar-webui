@@ -293,6 +293,25 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                   />
                 </div>
 
+                {/* Chat Template Kwargs */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-nord-4 mb-1">
+                    Chat Template Kwargs (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    name="chat_template_kwargs"
+                    value={(formData as LlamaCppConfig).chat_template_kwargs || ''}
+                    onChange={handleChange}
+                    placeholder='{"enable_thinking":true}'
+                    disabled={instance.status !== 'stopped'}
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                  />
+                  <p className="text-xs text-nord-4 mt-1">
+                    JSON string passed to llama-server as <code>--chat-template-kwargs</code>.
+                  </p>
+                </div>
+
                 {/* Threads */}
                 <div>
                   <label className="block text-sm font-medium text-nord-4 mb-1">

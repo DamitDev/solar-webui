@@ -34,6 +34,7 @@ export interface LlamaCppConfig extends BaseInstanceConfig {
   min_p: number;
   ctx_size: number;
   chat_template_file?: string;
+  chat_template_kwargs?: string;
   special?: boolean;
   ot?: string;
   model_type?: 'llm' | 'embedding' | 'reranker';
