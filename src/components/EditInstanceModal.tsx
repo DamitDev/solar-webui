@@ -312,6 +312,27 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                   </p>
                 </div>
 
+                {/* Reasoning Budget */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-nord-4 mb-1">
+                    Reasoning Budget (Optional)
+                  </label>
+                  <input
+                    type="number"
+                    name="reasoning_budget"
+                    value={(formData as LlamaCppConfig).reasoning_budget ?? ''}
+                    onChange={handleChange}
+                    placeholder="Leave blank to disable"
+                    min="1"
+                    step="1"
+                    disabled={instance.status !== 'stopped'}
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <p className="text-xs text-nord-4 mt-1">
+                    Token limit for reasoning passed as <code>--reasoning-budget</code>. Leave blank to omit.
+                  </p>
+                </div>
+
                 {/* Threads */}
                 <div>
                   <label className="block text-sm font-medium text-nord-4 mb-1">
