@@ -430,13 +430,13 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                         name="reasoning_budget"
                         value={(formData as Partial<LlamaCppConfig>).reasoning_budget ?? ''}
                         onChange={handleChange}
-                        placeholder="Leave blank to disable"
-                        min="1"
+                        placeholder="-1 = unrestricted, 0 = disable, blank = omit"
+                        min="-1"
                         step="1"
                         className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                       />
                       <p className="text-xs text-nord-4 mt-1">
-                        Token limit for reasoning passed as <code>--reasoning-budget</code>. Leave blank to omit.
+                        Passed as <code>--reasoning-budget</code>. Use <code>-1</code> for unrestricted, <code>0</code> to disable thinking. Leave blank to omit.
                       </p>
                     </div>
                   )}

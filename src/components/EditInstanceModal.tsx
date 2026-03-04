@@ -185,7 +185,6 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                       checked={!!(formData as LlamaCppConfig).special}
                       onChange={handleChange}
                       className="h-4 w-4 rounded border-nord-3 bg-nord-1 text-nord-10 focus:ring-nord-10"
-                      disabled={instance.status !== 'stopped'}
                     />
                   </div>
                   <div>
@@ -209,8 +208,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     value={(formData as LlamaCppConfig).ot || ''}
                     onChange={handleChange}
                     placeholder="Override tensor string"
-                    disabled={instance.status !== 'stopped'}
-                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                   />
                   <p className="text-xs text-nord-4 mt-1">
                     Override tensor string passed to llama-server as <code>-ot</code> flag.
@@ -226,8 +224,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     name="model_type"
                     value={(formData as LlamaCppConfig).model_type || 'llm'}
                     onChange={handleChange}
-                    disabled={instance.status !== 'stopped'}
-                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                   >
                     <option value="llm">LLM</option>
                     <option value="embedding">Embedding</option>
@@ -247,7 +244,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     name="pooling"
                     value={(formData as LlamaCppConfig).pooling || ''}
                     onChange={handleChange}
-                    disabled={instance.status !== 'stopped' || (formData as LlamaCppConfig).model_type !== 'embedding'}
+                    disabled={(formData as LlamaCppConfig).model_type !== 'embedding'}
                     className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <option value="">Default - Unspecified</option>
@@ -304,8 +301,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     value={(formData as LlamaCppConfig).chat_template_kwargs || ''}
                     onChange={handleChange}
                     placeholder='{"enable_thinking":true}'
-                    disabled={instance.status !== 'stopped'}
-                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed font-mono text-sm"
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent font-mono text-sm"
                   />
                   <p className="text-xs text-nord-4 mt-1">
                     JSON string passed to llama-server as <code>--chat-template-kwargs</code>.
@@ -322,14 +318,13 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     name="reasoning_budget"
                     value={(formData as LlamaCppConfig).reasoning_budget ?? ''}
                     onChange={handleChange}
-                    placeholder="Leave blank to disable"
-                    min="1"
+                    placeholder="-1 = unrestricted, 0 = disable, blank = omit"
+                    min="-1"
                     step="1"
-                    disabled={instance.status !== 'stopped'}
-                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                   />
                   <p className="text-xs text-nord-4 mt-1">
-                    Token limit for reasoning passed as <code>--reasoning-budget</code>. Leave blank to omit.
+                    Passed as <code>--reasoning-budget</code>. Use <code>-1</code> for unrestricted, <code>0</code> to disable thinking. Leave blank to omit.
                   </p>
                 </div>
 
