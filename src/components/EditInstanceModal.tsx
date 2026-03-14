@@ -374,6 +374,60 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                   />
                 </div>
 
+                {/* KV Cache Type K */}
+                <div>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">
+                    Cache Type K
+                  </label>
+                  <select
+                    name="cache_type_k"
+                    value={(formData as LlamaCppConfig).cache_type_k || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                  >
+                    <option value="">Default</option>
+                    <option value="f32">f32</option>
+                    <option value="f16">f16</option>
+                    <option value="bf16">bf16</option>
+                    <option value="q8_0">q8_0</option>
+                    <option value="q4_0">q4_0</option>
+                    <option value="q4_1">q4_1</option>
+                    <option value="iq4_nl">iq4_nl</option>
+                    <option value="q5_0">q5_0</option>
+                    <option value="q5_1">q5_1</option>
+                  </select>
+                  <p className="text-xs text-nord-4 mt-1">
+                    KV cache quantization for keys (<code>-ctk</code>).
+                  </p>
+                </div>
+
+                {/* KV Cache Type V */}
+                <div>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">
+                    Cache Type V
+                  </label>
+                  <select
+                    name="cache_type_v"
+                    value={(formData as LlamaCppConfig).cache_type_v || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                  >
+                    <option value="">Default</option>
+                    <option value="f32">f32</option>
+                    <option value="f16">f16</option>
+                    <option value="bf16">bf16</option>
+                    <option value="q8_0">q8_0</option>
+                    <option value="q4_0">q4_0</option>
+                    <option value="q4_1">q4_1</option>
+                    <option value="iq4_nl">iq4_nl</option>
+                    <option value="q5_0">q5_0</option>
+                    <option value="q5_1">q5_1</option>
+                  </select>
+                  <p className="text-xs text-nord-4 mt-1">
+                    KV cache quantization for values (<code>-ctv</code>).
+                  </p>
+                </div>
+
                 {/* Temperature */}
                 <div>
                   <label className="block text-sm font-medium text-nord-4 mb-1">
