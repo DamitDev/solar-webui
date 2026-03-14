@@ -8,6 +8,10 @@ import {
   GatewayStats,
   GatewayRequestsResponse,
   GatewayEventDTO,
+  ApiEndpoint,
+  EndpointCreateRequest,
+  EndpointUpdateRequest,
+  EndpointUsageResponse,
 } from './types';
 
 const DEFAULT_RELATIVE_CONTROL_BASE = '/api/control';
@@ -146,32 +150,41 @@ class SolarClient {
   }
 
   /**
-   * Get the unified event stream WebSocket URL.
-   * WebSocket 2.0: Single connection for all events.
+   * Get the base URL for Socket.IO connection.
+   * For relative paths (e.g. /api/control), returns window.location.origin.
+   * For absolute URLs, returns the control base URL.
    */
-  getEventStreamWebSocketUrl(): string {
-    return this.buildWebSocketUrl('/ws/events');
+  getControlSocketIOUrl(): string {
+    if (isAbsoluteUrl(this.httpBase)) {
+      return this.httpBase;
+    }
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    return '';
   }
 
   /**
-   * Get a WebSocket URL for a specific path on solar-control.
+   * Get the Socket.IO path for the connection.
+   * For relative paths: /api/control/socket.io (proxy rewrites to /socket.io)
+   * For absolute URLs: /socket.io (control server root)
    */
-  getControlWebSocketUrl(path: string): string {
-    return this.buildWebSocketUrl(path);
+  getSocketIOPath(): string {
+    if (isAbsoluteUrl(this.httpBase)) {
+      return '/socket.io';
+    }
+    return '/api/control/socket.io';
   }
 
   /**
-   * @deprecated Use getEventStreamWebSocketUrl() instead.
-   * Instance state is now streamed through the unified event stream.
+   * Get the management API key for Socket.IO auth.
    */
-  getInstanceStateWebSocketUrl(hostId: string, instanceId: string): string {
-    // Legacy: return old proxy URL for backward compatibility
-    // New code should use EventStreamContext instead
-    return this.buildWebSocketUrl(`/ws/instances/${hostId}/${instanceId}/state`);
+  getManagementApiKey(): string {
+    return import.meta.env.VITE_SOLAR_CONTROL_API_KEY || '';
   }
 
   // Gateway monitoring
-  async getGatewayStats(params: { from?: string; to?: string; request_type?: string }): Promise<GatewayStats> {
+  async getGatewayStats(params: { from?: string; to?: string; request_type?: string; endpoint_id?: string }): Promise<GatewayStats> {
     const response = await this.client.get('/gateway/stats', { params });
     return response.data as GatewayStats;
   }
@@ -183,6 +196,7 @@ class SolarClient {
     request_type?: string;
     model?: string;
     host_id?: string;
+    endpoint_id?: string;
     page?: number;
     limit?: number;
   }): Promise<GatewayRequestsResponse> {
@@ -195,6 +209,7 @@ class SolarClient {
     to?: string;
     types?: string; // comma separated
     limit?: number;
+    endpoint_id?: string;
   }): Promise<{ from: string; to: string; types: string[]; items: GatewayEventDTO[] }> {
     const response = await this.client.get('/gateway/events/recent', { params });
     return response.data as { from: string; to: string; types: string[]; items: GatewayEventDTO[] };
@@ -221,38 +236,37 @@ class SolarClient {
     return response.data;
   }
 
-  /**
-   * @deprecated Logs are now streamed through the unified event stream.
-   * Use EventStreamContext.getInstanceLogs() instead.
-   */
-  getLogWebSocketUrl(hostId: string, instanceId: string): string {
-    // Legacy: return old proxy URL for backward compatibility
-    // New code should use EventStreamContext instead
-    return this.buildWebSocketUrl(`/ws/logs/${hostId}/${instanceId}`);
+  // API Endpoint management
+  async getEndpoints(): Promise<ApiEndpoint[]> {
+    const response = await this.client.get('/api/endpoints');
+    return response.data;
   }
 
-  private buildWebSocketUrl(path: string): string {
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-    const resolveBase = () => {
-      if (isAbsoluteUrl(this.httpBase)) {
-        return new URL(this.httpBase);
-      }
-      if (typeof window !== 'undefined') {
-        return new URL(this.httpBase, window.location.origin);
-      }
-      return null;
-    };
-
-    const baseUrl = resolveBase();
-    if (!baseUrl) {
-      return normalizedPath;
-    }
-
-    const scheme = baseUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-    const basePath = baseUrl.pathname.replace(/\/$/, '');
-    return `${scheme}//${baseUrl.host}${basePath}${normalizedPath}`;
+  async createEndpoint(data: EndpointCreateRequest): Promise<ApiEndpoint> {
+    const response = await this.client.post('/api/endpoints', data);
+    return response.data;
   }
+
+  async getEndpoint(id: string): Promise<ApiEndpoint> {
+    const response = await this.client.get(`/api/endpoints/${id}`);
+    return response.data;
+  }
+
+  async updateEndpoint(id: string, data: EndpointUpdateRequest): Promise<ApiEndpoint> {
+    const response = await this.client.put(`/api/endpoints/${id}`, data);
+    return response.data;
+  }
+
+  async deleteEndpoint(id: string): Promise<{ message: string; id: string }> {
+    const response = await this.client.delete(`/api/endpoints/${id}`);
+    return response.data;
+  }
+
+  async getEndpointUsage(id: string, hours: number = 24): Promise<EndpointUsageResponse> {
+    const response = await this.client.get(`/api/endpoints/${id}/usage`, { params: { hours } });
+    return response.data;
+  }
+
 }
 
 // Export a default instance

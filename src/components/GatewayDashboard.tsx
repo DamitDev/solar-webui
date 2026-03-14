@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, RefreshCw, RotateCcw, TriangleAlert } from 'lucide-react';
 import solarClient from '@/api/client';
-import { GatewayStats, GatewayRequestSummary } from '@/api/types';
+import { ApiEndpoint, GatewayStats, GatewayRequestSummary } from '@/api/types';
 import { useEventStreamContext } from '@/context/EventStreamContext';
 import { useRoutingEventsContext } from '@/context/RoutingEventsContext';
 import { formatTokenCount } from '@/lib/utils';
@@ -83,6 +83,11 @@ export function GatewayDashboard() {
   const [requestTypeFilter, setRequestTypeFilter] = useState<string>('all');
   const [hostFilter, setHostFilter] = useState<string>('all');
   const [modelFilter, setModelFilter] = useState<string>('all');
+  const [endpointFilter, setEndpointFilter] = useState<string>('all');
+
+  // Endpoints list (for filter dropdown and per-endpoint cards)
+  const [endpoints, setEndpoints] = useState<ApiEndpoint[]>([]);
+  const [endpointStats, setEndpointStats] = useState<Record<string, GatewayStats>>({});
 
   // Historical requests (REST fallback when not live or for pagination)
   const [historicalRequests, setHistoricalRequests] = useState<GatewayRequestSummary[]>([]);
@@ -98,6 +103,7 @@ export function GatewayDashboard() {
   // Available hosts and models from stats
   const availableHosts = useMemo(() => stats?.hosts?.map(h => ({ id: h.host_id, name: h.host_name || h.host_id })) || [], [stats]);
   const availableModels = useMemo(() => stats?.models?.map(m => m.model) || [], [stats]);
+  const endpointNameById = useMemo(() => new Map(endpoints.map(ep => [ep.id, ep.name])), [endpoints]);
 
   // Update dates when preset changes
   useEffect(() => {
@@ -115,9 +121,15 @@ export function GatewayDashboard() {
       request_type: requestTypeFilter,
       host_id: hostFilter !== 'all' ? hostFilter : null,
       model: modelFilter !== 'all' ? modelFilter : null,
+      endpoint_id: endpointFilter !== 'all' ? endpointFilter : null,
     });
     clearGatewayRequests();
-  }, [statusFilter, requestTypeFilter, hostFilter, modelFilter, setFilter, clearGatewayRequests]);
+  }, [statusFilter, requestTypeFilter, hostFilter, modelFilter, endpointFilter, setFilter, clearGatewayRequests]);
+
+  // Fetch endpoints on mount
+  useEffect(() => {
+    solarClient.getEndpoints().then(setEndpoints).catch(() => setEndpoints([]));
+  }, []);
 
   // Fetch data functions
   const fetchStats = useCallback(async () => {
@@ -127,12 +139,33 @@ export function GatewayDashboard() {
         from: fromIso, 
         to: toIso,
         request_type: requestTypeFilter !== 'all' ? requestTypeFilter : undefined,
+        endpoint_id: endpointFilter !== 'all' ? endpointFilter : undefined,
       });
       setStats(s);
     } finally {
       setLoadingStats(false);
     }
-  }, [fromIso, toIso, requestTypeFilter]);
+  }, [fromIso, toIso, requestTypeFilter, endpointFilter]);
+
+  const fetchEndpointStats = useCallback(async () => {
+    const baseParams = {
+      from: fromIso,
+      to: toIso,
+      request_type: requestTypeFilter !== 'all' ? requestTypeFilter : undefined,
+    };
+    const results: Record<string, GatewayStats> = {};
+    // Always fetch aggregate for "All" card
+    const allStats = await solarClient.getGatewayStats(baseParams);
+    results['all'] = allStats;
+    // Fetch per-endpoint stats
+    await Promise.all(
+      endpoints.map(async (ep) => {
+        const s = await solarClient.getGatewayStats({ ...baseParams, endpoint_id: ep.id });
+        results[ep.id] = s;
+      })
+    );
+    setEndpointStats(results);
+  }, [fromIso, toIso, requestTypeFilter, endpoints]);
 
   const fetchRequests = useCallback(async () => {
     setLoadingReqs(true);
@@ -144,6 +177,7 @@ export function GatewayDashboard() {
         request_type: requestTypeFilter !== 'all' ? requestTypeFilter : undefined,
         host_id: hostFilter !== 'all' ? hostFilter : undefined,
         model: modelFilter !== 'all' ? modelFilter : undefined,
+        endpoint_id: endpointFilter !== 'all' ? endpointFilter : undefined,
         page, 
         limit,
       });
@@ -152,18 +186,24 @@ export function GatewayDashboard() {
     } finally {
       setLoadingReqs(false);
     }
-  }, [fromIso, toIso, statusFilter, requestTypeFilter, hostFilter, modelFilter, page, limit]);
+  }, [fromIso, toIso, statusFilter, requestTypeFilter, hostFilter, modelFilter, endpointFilter, page, limit]);
 
   const refreshAll = useCallback(() => {
     fetchStats();
     fetchRequests();
-  }, [fetchStats, fetchRequests]);
+    fetchEndpointStats();
+  }, [fetchStats, fetchRequests, fetchEndpointStats]);
 
   // Load data when filters, time range, or pagination change
   useEffect(() => {
     fetchStats();
     fetchRequests();
   }, [fetchStats, fetchRequests]);
+
+  // Fetch per-endpoint stats when endpoints or time range change
+  useEffect(() => {
+    fetchEndpointStats();
+  }, [fetchEndpointStats]);
 
   // Periodic refresh when live (every 30s)
   useEffect(() => {
@@ -181,11 +221,17 @@ export function GatewayDashboard() {
   // Backfill recent events on mount
   useEffect(() => {
     const loadEvents = async () => {
-      const res = await solarClient.getRecentGatewayEvents({ from: fromIso, to: toIso, limit: 1000, types: 'request_error,request_reroute' });
+      const res = await solarClient.getRecentGatewayEvents({
+        from: fromIso,
+        to: toIso,
+        limit: 1000,
+        types: 'request_error,request_reroute',
+        endpoint_id: endpointFilter !== 'all' ? endpointFilter : undefined,
+      });
       addRecentEvents(res.items as unknown as any);
     };
     loadEvents();
-  }, [fromIso, toIso, addRecentEvents]);
+  }, [fromIso, toIso, endpointFilter, addRecentEvents]);
 
   // Combine requests for display
   const displayRequests = useMemo(() => {
@@ -254,6 +300,17 @@ export function GatewayDashboard() {
               />
             </>
           )}
+          <select
+            value={endpointFilter}
+            onChange={(e) => { setPage(1); setEndpointFilter(e.target.value); }}
+            className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1"
+            title="Filter by endpoint"
+          >
+            <option value="all">All Endpoints</option>
+            {endpoints.map((ep) => (
+              <option key={ep.id} value={ep.id}>{ep.name}</option>
+            ))}
+          </select>
           <button onClick={refreshAll} className="px-3 py-2 bg-nord-3 text-nord-6 rounded hover:bg-nord-2">
             <RefreshCw size={16} className={loadingStats || loadingReqs ? 'animate-spin' : ''} />
           </button>
@@ -289,6 +346,58 @@ export function GatewayDashboard() {
           <div className="text-nord-4 text-xs">avg {formatTokenCount(stats?.avg_tokens_out)}</div>
         </div>
       </div>
+
+      {/* Per-endpoint usage cards */}
+      {endpoints.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+          <div
+            className={`border rounded p-3 text-sm cursor-pointer transition-colors ${
+              endpointFilter === 'all'
+                ? 'bg-nord-10/20 border-nord-10'
+                : 'bg-nord-1 border-nord-3 hover:border-nord-4'
+            }`}
+            onClick={() => { setPage(1); setEndpointFilter('all'); }}
+            title="Show all endpoints"
+          >
+            <div className="text-nord-6 font-medium">All</div>
+            <div className="text-nord-4 text-xs mt-1">
+              {(() => {
+                const all = endpointStats['all'];
+                const totalReqs = all ? (all.completed + all.missed + all.error) : 0;
+                const totalTokens = all ? (all.token_in_total + all.token_out_total) : 0;
+                return `${totalReqs} reqs • ${formatTokenCount(totalTokens)} tokens`;
+              })()}
+            </div>
+          </div>
+          {endpoints.map((ep) => {
+            const epStats = endpointStats[ep.id];
+            const totalReqs = (epStats?.completed ?? 0) + (epStats?.missed ?? 0) + (epStats?.error ?? 0);
+            const totalTokens = (epStats?.token_in_total ?? 0) + (epStats?.token_out_total ?? 0);
+            const avgLatency = epStats?.models?.length
+              ? epStats.models.reduce((sum, m) => sum + m.avg_duration_s * m.completed, 0) / (epStats.completed || 1)
+              : null;
+            const isSelected = endpointFilter === ep.id;
+            return (
+              <div
+                key={ep.id}
+                className={`border rounded p-3 text-sm cursor-pointer transition-colors ${
+                  isSelected
+                    ? 'bg-nord-10/20 border-nord-10'
+                    : 'bg-nord-1 border-nord-3 hover:border-nord-4'
+                }`}
+                onClick={() => { setPage(1); setEndpointFilter(ep.id); }}
+                title={`Filter to ${ep.name}`}
+              >
+                <div className="text-nord-6 font-medium truncate">{ep.name}</div>
+                <div className="text-nord-4 text-xs mt-1">
+                  {totalReqs} reqs • {formatTokenCount(totalTokens)} tokens
+                  {avgLatency != null && ` • ${avgLatency.toFixed(2)}s avg`}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Live Events */}
       <div className="bg-nord-1 border border-nord-3 rounded">
@@ -392,6 +501,7 @@ export function GatewayDashboard() {
             <thead className="bg-nord-2 text-nord-4">
               <tr>
                 <th className="text-left px-3 py-2">Time</th>
+                <th className="text-left px-3 py-2">Endpoint</th>
                 <th className="text-left px-3 py-2">Type</th>
                 <th className="text-left px-3 py-2">Model</th>
                 <th className="text-left px-3 py-2">Status</th>
@@ -407,6 +517,11 @@ export function GatewayDashboard() {
                 displayRequests.map((r: GatewayRequestSummary) => (
                   <tr key={r.request_id} className="border-t border-nord-3">
                     <td className="px-3 py-2 whitespace-nowrap">{formatDateTime(r.end_timestamp)}</td>
+                    <td className="px-3 py-2">
+                      <span className="text-xs px-2 py-0.5 rounded bg-nord-2 text-nord-4">
+                        {r.endpoint_id ? (endpointNameById.get(r.endpoint_id) ?? r.endpoint_id) : '—'}
+                      </span>
+                    </td>
                     <td className="px-3 py-2">
                       <span className="text-xs px-2 py-0.5 rounded bg-nord-2 text-nord-4">
                         {r.request_type || 'unknown'}
@@ -431,7 +546,7 @@ export function GatewayDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={9} className="px-3 py-6 text-center text-nord-4">No data</td>
+                  <td colSpan={10} className="px-3 py-6 text-center text-nord-4">No data</td>
                 </tr>
               )}
             </tbody>

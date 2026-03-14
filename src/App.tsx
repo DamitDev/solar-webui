@@ -2,7 +2,8 @@ import { createBrowserRouter, RouterProvider, Navigate, Link, useLocation, Outle
 import { Dashboard } from './components/Dashboard';
 import { RoutingGraph } from './components/RoutingGraph';
 import { GatewayDashboard } from './components/GatewayDashboard';
-import { Activity, Server } from 'lucide-react';
+import { EndpointsDashboard } from './components/EndpointsDashboard';
+import { Activity, Server, Key } from 'lucide-react';
 import { RoutingEventsProvider } from './context/RoutingEventsContext';
 import { useRoutingEventsContext } from './context/RoutingEventsContext';
 
@@ -54,6 +55,17 @@ function Navigation() {
           <Server size={18} />
           Hosts & Instances
         </Link>
+        <Link
+          to="/endpoints"
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
+            location.pathname === '/endpoints'
+              ? 'bg-nord-10 text-nord-6 font-medium'
+              : 'text-nord-4 hover:bg-nord-2'
+          }`}
+        >
+          <Key size={18} />
+          Endpoints
+        </Link>
         <div className="ml-auto flex items-center gap-2 text-xs">
           <span className={isConnected ? 'text-nord-14' : 'text-nord-11'}>●</span>
           <span className="text-nord-4">Event Stream</span>
@@ -82,6 +94,7 @@ const router = createBrowserRouter([
       { path: '/routing', element: <RoutingGraph /> },
       { path: '/gateway', element: <GatewayDashboard /> },
       { path: '/hosts', element: <Dashboard /> },
+      { path: '/endpoints', element: <EndpointsDashboard /> },
     ],
   },
 ]);

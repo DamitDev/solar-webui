@@ -323,6 +323,7 @@ export interface GatewayRequestSummary {
   model?: string;
   resolved_model?: string;
   endpoint?: string;
+  endpoint_id?: string;
   client_ip?: string;
   stream?: boolean;
   attempts: number;
@@ -354,4 +355,44 @@ export interface GatewayEventDTO {
   type: 'request_error' | 'request_reroute';
   data?: any;
   timestamp?: string;
+}
+
+// API Endpoint management (multi-tenant API keys)
+export interface ApiEndpoint {
+  id: string;
+  name: string;
+  api_key: string;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EndpointCreateRequest {
+  name: string;
+  description?: string | null;
+  api_key?: string | null;
+}
+
+export interface EndpointUpdateRequest {
+  name?: string;
+  description?: string | null;
+  api_key?: string | null;
+}
+
+export interface EndpointUsageStats {
+  total_requests: number;
+  successful_requests: number;
+  error_requests: number;
+  missed_requests: number;
+  total_prompt_tokens: number;
+  total_completion_tokens: number;
+  total_tokens: number;
+  avg_duration_s: number | null;
+  avg_decode_tps: number | null;
+}
+
+export interface EndpointUsageResponse {
+  endpoint: ApiEndpoint;
+  hours: number;
+  usage: EndpointUsageStats;
 }

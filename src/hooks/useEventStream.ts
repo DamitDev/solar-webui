@@ -1,19 +1,19 @@
 /**
- * useEventStream - Unified WebSocket hook for solar-webui (WebSocket 2.0)
+ * useEventStream - Socket.IO hook for solar-webui
  *
- * This hook provides a single WebSocket connection to solar-control's /ws/events
- * endpoint, which streams all events:
+ * This hook provides a Socket.IO connection to solar-control's /webui namespace,
+ * which streams all events:
  * - host_status: Host online/offline status changes
  * - initial_status: Initial status of all hosts on connect
  * - log: Instance log messages from hosts
  * - instance_state: Instance runtime state updates from hosts
- * - request_start, request_routed, request_success, request_error: Routing events
+ * - request_start, request_routed, request_success, request_error, request_reroute: Routing events
  * - gateway_request: Completed request summaries (filterable)
  * - filter_status: Current filter configuration acknowledgement
- * - keepalive: Connection keepalive
  */
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { io, Socket } from 'socket.io-client';
 import solarClient from '@/api/client';
 import { MemoryInfo, LogMessage } from '@/api/types';
 
@@ -70,6 +70,7 @@ export interface RoutingEventData {
   model?: string;
   resolved_model?: string;
   endpoint?: string;
+  endpoint_id?: string;
   host_id?: string;
   host_name?: string;
   instance_id?: string;
@@ -94,6 +95,7 @@ export interface GatewayRequestSummary {
   model?: string;
   resolved_model?: string;
   endpoint?: string;
+  endpoint_id?: string;
   client_ip?: string;
   stream?: boolean;
   attempts: number;
@@ -118,6 +120,7 @@ export interface GatewayFilter {
   request_type: string; // all, chat, completion, embedding, classification
   model?: string | null;
   host_id?: string | null;
+  endpoint_id?: string | null;
 }
 
 export interface WSEvent {
@@ -135,6 +138,7 @@ export interface RequestState {
   model?: string;
   resolved_model?: string;
   endpoint?: string;
+  endpoint_id?: string;
   host_id?: string;
   host_name?: string;
   instance_id?: string;
@@ -164,6 +168,7 @@ const DEFAULT_FILTER: GatewayFilter = {
   request_type: 'all',
   model: null,
   host_id: null,
+  endpoint_id: null,
 };
 
 export function useEventStream(handlers: EventHandlers = {}) {
@@ -175,15 +180,17 @@ export function useEventStream(handlers: EventHandlers = {}) {
   const [gatewayRequests, setGatewayRequests] = useState<GatewayRequestSummary[]>([]);
   const [gatewayFilter, setGatewayFilter] = useState<GatewayFilter>(DEFAULT_FILTER);
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<number | null>(null);
-  const pingIntervalRef = useRef<number | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const handlersRef = useRef(handlers);
+  const gatewayFilterRef = useRef(gatewayFilter);
 
-  // Keep handlers ref updated
+  // Keep refs updated
   useEffect(() => {
     handlersRef.current = handlers;
   }, [handlers]);
+  useEffect(() => {
+    gatewayFilterRef.current = gatewayFilter;
+  }, [gatewayFilter]);
 
   const updateRequest = useCallback((requestId: string, updates: Partial<RequestState>) => {
     setRequests((prev) => {
@@ -302,6 +309,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
           updateRequest(event.data.request_id, {
             model: event.data.model,
             endpoint: event.data.endpoint,
+            endpoint_id: event.data.endpoint_id,
             status: 'pending',
             timestamp: event.data.timestamp,
             stream: event.data.stream,
@@ -319,6 +327,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
             instance_id: event.data.instance_id,
             instance_url: event.data.instance_url,
             resolved_model: event.data.resolved_model,
+            endpoint_id: event.data.endpoint_id,
             status: 'processing',
           });
           h.onRoutingEvent?.(event.type, event.data);
@@ -357,11 +366,14 @@ export function useEventStream(handlers: EventHandlers = {}) {
         break;
 
       case 'gateway_request':
-        // Completed request summary
+        // Completed request summary (client-side filter by endpoint_id)
         if (event.data) {
           const summary: GatewayRequestSummary = event.data;
+          const filterEp = gatewayFilterRef.current.endpoint_id;
+          if (filterEp && summary.endpoint_id !== filterEp) {
+            break;
+          }
           setGatewayRequests((prev) => {
-            // Add to front, keep last 500
             const updated = [summary, ...prev].slice(0, 500);
             return updated;
           });
@@ -384,21 +396,18 @@ export function useEventStream(handlers: EventHandlers = {}) {
   }, [updateRequest, removeRequest]);
 
   // Send filter update to server
-  // Using functional update to avoid dependency on gatewayFilter (prevents infinite re-render loop)
   const setFilter = useCallback((filter: Partial<GatewayFilter>) => {
     setGatewayFilter((prevFilter) => {
       const newFilter: GatewayFilter = {
         ...prevFilter,
         ...filter,
       };
-      
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: 'set_filter',
-          filter: newFilter,
-        }));
+
+      const socket = socketRef.current;
+      if (socket?.connected) {
+        socket.emit('set_filter', newFilter);
       }
-      
+
       return newFilter;
     });
   }, []);
@@ -408,76 +417,90 @@ export function useEventStream(handlers: EventHandlers = {}) {
     setGatewayRequests([]);
   }, []);
 
-  const connect = useCallback(() => {
-    const wsUrl = solarClient.getControlWebSocketUrl('/ws/events');
+  useEffect(() => {
+    const baseUrl = solarClient.getControlSocketIOUrl();
+    const path = solarClient.getSocketIOPath();
+    const apiKey = solarClient.getManagementApiKey();
 
-    console.log('EventStream: Connecting to', wsUrl);
+    if (!baseUrl) {
+      console.warn('EventStream: No base URL for Socket.IO');
+      return;
+    }
 
-    const ws = new WebSocket(wsUrl);
+    // Connect to /webui namespace (namespace is in the URL path)
+    const urlWithNamespace = baseUrl.replace(/\/$/, '') + '/webui';
+    console.log('EventStream: Connecting to', urlWithNamespace, 'path:', path);
 
-    ws.onopen = () => {
+    const socket = io(urlWithNamespace, {
+      path,
+      transports: ['websocket'],
+      auth: { api_key: apiKey },
+      autoConnect: true,
+    });
+
+    socketRef.current = socket;
+    const webuiSocket = socket;
+
+    webuiSocket.on('connect', () => {
       console.log('EventStream: Connected');
       setIsConnected(true);
-      wsRef.current = ws;
+    });
 
-      // Send ping every 25 seconds
-      pingIntervalRef.current = window.setInterval(() => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send('ping');
-        }
-      }, 25000);
-    };
-
-    ws.onmessage = (event) => {
-      if (typeof event.data === 'string' && event.data === 'pong') {
-        return;
-      }
-
-      try {
-        const message: WSEvent = JSON.parse(event.data);
-        handleEvent(message);
-      } catch (error) {
-        console.error('EventStream: Failed to parse message:', error);
-      }
-    };
-
-    ws.onerror = (error) => {
-      console.error('EventStream: WebSocket error:', error);
-    };
-
-    ws.onclose = () => {
-      console.log('EventStream: Disconnected, reconnecting in 5s...');
+    webuiSocket.on('disconnect', (reason) => {
+      console.log('EventStream: Disconnected', reason);
       setIsConnected(false);
-      wsRef.current = null;
+    });
 
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
-      }
+    webuiSocket.on('connect_error', (err) => {
+      console.error('EventStream: Connection error', err.message);
+      setIsConnected(false);
+    });
 
-      reconnectTimeoutRef.current = window.setTimeout(() => {
-        connect();
-      }, 5000);
+    // Map Socket.IO events (emitted by event name) to WSEvent format for handleEvent
+    const bindEvent = (eventName: string, toWSEvent: (payload: any) => WSEvent) => {
+      webuiSocket.on(eventName, (payload: any) => {
+        handleEvent(toWSEvent(payload));
+      });
     };
 
-    return ws;
-  }, [handleEvent]);
-
-  useEffect(() => {
-    const ws = connect();
+    bindEvent('initial_status', (payload) => ({ type: 'initial_status', data: payload }));
+    bindEvent('host_status', (payload) => ({ type: 'host_status', data: payload }));
+    bindEvent('host_health', (payload) => ({
+      type: 'host_health',
+      host_id: payload?.host_id,
+      data: payload?.data,
+    }));
+    bindEvent('instance_state', (payload) => ({
+      type: 'instance_state',
+      host_id: payload?.host_id,
+      instance_id: payload?.instance_id,
+      timestamp: payload?.timestamp,
+      data: payload?.data ?? payload,
+    }));
+    bindEvent('log', (payload) => ({
+      type: 'log',
+      host_id: payload?.host_id,
+      instance_id: payload?.instance_id,
+      timestamp: payload?.timestamp,
+      data: payload?.data ?? payload,
+    }));
+    bindEvent('request_start', (payload) => ({ type: 'request_start', data: payload }));
+    bindEvent('request_routed', (payload) => ({ type: 'request_routed', data: payload }));
+    bindEvent('request_success', (payload) => ({ type: 'request_success', data: payload }));
+    bindEvent('request_error', (payload) => ({ type: 'request_error', data: payload }));
+    bindEvent('request_reroute', (payload) => ({ type: 'request_reroute', data: payload }));
+    bindEvent('gateway_request', (payload) => ({ type: 'gateway_request', data: payload }));
+    bindEvent('filter_status', (payload) => ({
+      type: 'filter_status',
+      filter: payload?.filter ?? payload,
+    }));
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-      }
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.close();
-      }
+      socket.disconnect();
+      socket.removeAllListeners();
+      socketRef.current = null;
     };
-  }, [connect]);
+  }, [handleEvent]);
 
   // Helper to get logs for a specific instance
   const getInstanceLogs = useCallback(
