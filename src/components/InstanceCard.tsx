@@ -122,18 +122,18 @@ export function InstanceCard({
     }
   };
 
-  // Get model display name based on backend type
   const getModelDisplay = () => {
     if (isLlamaCppConfig(instance.config)) {
-      return (instance.config as LlamaCppConfig).model;
+      return (instance.config as LlamaCppConfig).model || instance.config.alias || instance.id;
     }
-    return (instance.config as HuggingFaceCausalConfig | HuggingFaceClassificationConfig | HuggingFaceEmbeddingConfig).model_id;
+    return (instance.config as HuggingFaceCausalConfig | HuggingFaceClassificationConfig | HuggingFaceEmbeddingConfig).model_id || instance.config.alias || instance.id;
   };
 
-  // Get backend-specific details
+  // Get backend-specific details (guards for incomplete config from Socket.IO placeholders)
   const renderBackendDetails = () => {
     if (isLlamaCppConfig(instance.config)) {
       const config = instance.config as LlamaCppConfig;
+      if (config.ctx_size == null) return null;
       return (
         <>
           <div className="flex justify-between">
@@ -150,6 +150,7 @@ export function InstanceCard({
 
     if (isHuggingFaceCausalConfig(instance.config)) {
       const config = instance.config as HuggingFaceCausalConfig;
+      if (config.max_length == null) return null;
       return (
         <>
           <div className="flex justify-between">
@@ -170,6 +171,7 @@ export function InstanceCard({
 
     if (isHuggingFaceClassificationConfig(instance.config)) {
       const config = instance.config as HuggingFaceClassificationConfig;
+      if (config.max_length == null) return null;
       return (
         <>
           <div className="flex justify-between">
@@ -194,6 +196,7 @@ export function InstanceCard({
 
     if (isHuggingFaceEmbeddingConfig(instance.config)) {
       const config = instance.config as HuggingFaceEmbeddingConfig;
+      if (config.max_length == null) return null;
       return (
         <>
           <div className="flex justify-between">
