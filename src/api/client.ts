@@ -77,75 +77,75 @@ class SolarClient {
 
   // Host Management
   async getHosts(): Promise<Host[]> {
-    const response = await this.client.get('/hosts');
+    const response = await this.client.get('/api/hosts');
     return response.data;
   }
 
   async getHost(hostId: string): Promise<Host> {
-    const response = await this.client.get(`/hosts/${hostId}`);
+    const response = await this.client.get(`/api/hosts/${hostId}`);
     return response.data;
   }
 
   async createHost(data: HostCreateRequest): Promise<{ host: Host; message: string }> {
-    const response = await this.client.post('/hosts', data);
+    const response = await this.client.post('/api/hosts', data);
     return response.data;
   }
 
   async deleteHost(hostId: string): Promise<{ host: Host; message: string }> {
-    const response = await this.client.delete(`/hosts/${hostId}`);
+    const response = await this.client.delete(`/api/hosts/${hostId}`);
     return response.data;
   }
 
   async refreshAllHosts(): Promise<{ message: string; results: Array<{ host_id: string; name: string; status: string; message: string }> }> {
-    const response = await this.client.post('/hosts/refresh-all');
+    const response = await this.client.post('/api/hosts/refresh-all');
     return response.data;
   }
 
   async getHostInstances(hostId: string): Promise<Instance[]> {
-    const response = await this.client.get(`/hosts/${hostId}/instances`);
+    const response = await this.client.get(`/api/hosts/${hostId}/instances`);
     return response.data;
   }
 
   // Instance Control (via solar-control proxy)
   async startInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances/${instanceId}/start`);
+    const response = await this.client.post(`/api/hosts/${hostId}/instances/${instanceId}/start`);
     return response.data;
   }
 
   async stopInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances/${instanceId}/stop`);
+    const response = await this.client.post(`/api/hosts/${hostId}/instances/${instanceId}/stop`);
     return response.data;
   }
 
   async restartInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances/${instanceId}/restart`);
+    const response = await this.client.post(`/api/hosts/${hostId}/instances/${instanceId}/restart`);
     return response.data;
   }
 
   async createInstance(hostId: string, config: any): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances`, { config });
+    const response = await this.client.post(`/api/hosts/${hostId}/instances`, { config });
     return response.data;
   }
 
   async updateInstance(hostId: string, instanceId: string, config: any): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.put(`/hosts/${hostId}/instances/${instanceId}`, { config });
+    const response = await this.client.put(`/api/hosts/${hostId}/instances/${instanceId}`, { config });
     return response.data;
   }
 
   async deleteInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.delete(`/hosts/${hostId}/instances/${instanceId}`);
+    const response = await this.client.delete(`/api/hosts/${hostId}/instances/${instanceId}`);
     return response.data;
   }
 
   // Instance runtime state (via solar-control proxy)
   async getInstanceState(hostId: string, instanceId: string): Promise<InstanceRuntimeState> {
-    const response = await this.client.get(`/hosts/${hostId}/instances/${instanceId}/state`);
+    const response = await this.client.get(`/api/hosts/${hostId}/instances/${instanceId}/state`);
     return response.data;
   }
 
   // Instance logs (via solar-control proxy)
   async getInstanceLogs(hostId: string, instanceId: string): Promise<Array<{ seq: number; timestamp: string; line: string }>> {
-    const response = await this.client.get(`/hosts/${hostId}/instances/${instanceId}/logs`);
+    const response = await this.client.get(`/api/hosts/${hostId}/instances/${instanceId}/logs`);
     return response.data;
   }
 
@@ -185,7 +185,7 @@ class SolarClient {
 
   // Gateway monitoring
   async getGatewayStats(params: { from?: string; to?: string; request_type?: string; endpoint_id?: string }): Promise<GatewayStats> {
-    const response = await this.client.get('/gateway/stats', { params });
+    const response = await this.client.get('/api/gateway/stats', { params });
     return response.data as GatewayStats;
   }
 
@@ -200,7 +200,7 @@ class SolarClient {
     page?: number;
     limit?: number;
   }): Promise<GatewayRequestsResponse> {
-    const response = await this.client.get('/gateway/requests', { params });
+    const response = await this.client.get('/api/gateway/requests', { params });
     return response.data as GatewayRequestsResponse;
   }
 
@@ -211,7 +211,7 @@ class SolarClient {
     limit?: number;
     endpoint_id?: string;
   }): Promise<{ from: string; to: string; types: string[]; items: GatewayEventDTO[] }> {
-    const response = await this.client.get('/gateway/events/recent', { params });
+    const response = await this.client.get('/api/gateway/events/recent', { params });
     return response.data as { from: string; to: string; types: string[]; items: GatewayEventDTO[] };
   }
 

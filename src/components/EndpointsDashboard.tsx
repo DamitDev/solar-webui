@@ -162,11 +162,12 @@ function CreateEndpointModal({ onClose, onSuccess }: CreateEndpointModalProps) {
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Production tenant API key"
+              placeholder="e.g. Production environment endpoint"
               rows={2}
               className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:outline-none focus:ring-2 focus:ring-nord-10 resize-none"
             />
           </div>
+          <p className="text-xs text-nord-4">An API key will be generated automatically.</p>
           <div className="flex gap-2 pt-2">
             <button
               type="button"
@@ -253,7 +254,7 @@ function EditEndpointModal({ endpoint, onClose, onSuccess }: EditEndpointModalPr
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Production tenant API key"
+              placeholder="e.g. Production environment endpoint"
               rows={2}
               className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:outline-none focus:ring-2 focus:ring-nord-10 resize-none"
             />
