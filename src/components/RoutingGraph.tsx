@@ -81,7 +81,7 @@ interface InstanceData {
 export function RoutingGraph() {
   const { requests, removeRequest } = useRoutingEventsContext();
   const { getInstanceState } = useEventStreamContext();
-  const { hosts, loading } = useInstances(10000);
+  const { hosts, loading } = useInstances();
   const [endpoints, setEndpoints] = useState<ApiEndpoint[]>([]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);

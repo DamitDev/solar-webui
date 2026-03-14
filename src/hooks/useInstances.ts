@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import solarClient from '@/api/client';
-import { Host, Instance } from '@/api/types';
+import { Host, Instance, InstanceStatus } from '@/api/types';
 import { useRoutingEventsContext } from '@/context/RoutingEventsContext';
 import { InstanceSummary } from '@/hooks/useEventStream';
 
@@ -73,7 +73,7 @@ function mergeInstanceData(
     if (existing) {
       merged.push({
         ...existing,
-        status: si.status || existing.status,
+        status: (si.status as InstanceStatus) || existing.status,
       });
       restMap.delete(si.id);
     } else {
