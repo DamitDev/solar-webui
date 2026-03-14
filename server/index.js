@@ -110,6 +110,12 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+app.get('/api/config', (_req, res) => {
+  res.json({
+    management_api_key: CONTROL_API_KEY,
+  });
+});
+
 if (fs.existsSync(DIST_DIR)) {
   app.use(compression());
   app.use(

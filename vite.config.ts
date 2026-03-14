@@ -7,7 +7,18 @@ const controlApiKey = process.env.SOLAR_CONTROL_API_KEY || '';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    {
+      name: 'solar-dev-config',
+      configureServer(server) {
+        server.middlewares.use('/api/config', (_req, res) => {
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ management_api_key: controlApiKey }));
+        });
+      },
+    },
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

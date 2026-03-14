@@ -37,6 +37,8 @@ const normalizeHttpBase = (value?: string | null): string => {
 class SolarClient {
   private client: AxiosInstance;
   private httpBase: string;
+  private _managementApiKey: string | null = null;
+  private _configPromise: Promise<string> | null = null;
 
   constructor(baseURL?: string) {
     const overrideBase =
@@ -196,9 +198,45 @@ class SolarClient {
 
   /**
    * Get the management API key for Socket.IO auth.
+   * Tries VITE env var first, then fetches from server at runtime.
    */
   getManagementApiKey(): string {
-    return import.meta.env.VITE_SOLAR_CONTROL_API_KEY || '';
+    if (this._managementApiKey) return this._managementApiKey;
+    const envKey = import.meta.env.VITE_SOLAR_CONTROL_API_KEY;
+    if (envKey) {
+      this._managementApiKey = envKey;
+      return envKey;
+    }
+    return '';
+  }
+
+  /**
+   * Fetch the management API key from the server (works in Docker/prod
+   * where VITE_ env vars aren't baked into the build).
+   */
+  async fetchManagementApiKey(): Promise<string> {
+    if (this._managementApiKey) return this._managementApiKey;
+
+    const envKey = import.meta.env.VITE_SOLAR_CONTROL_API_KEY;
+    if (envKey) {
+      this._managementApiKey = envKey;
+      return envKey;
+    }
+
+    if (!this._configPromise) {
+      this._configPromise = (async () => {
+        try {
+          const resp = await axios.get('/api/config');
+          const key = resp.data?.management_api_key || '';
+          this._managementApiKey = key;
+          return key;
+        } catch (e) {
+          console.warn('Failed to fetch /api/config:', e);
+          return '';
+        }
+      })();
+    }
+    return this._configPromise;
   }
 
   // Gateway monitoring

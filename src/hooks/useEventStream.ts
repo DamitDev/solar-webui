@@ -441,28 +441,39 @@ export function useEventStream(handlers: EventHandlers = {}) {
   }, []);
 
   useEffect(() => {
-    const baseUrl = solarClient.getControlSocketIOUrl();
-    const path = solarClient.getSocketIOPath();
-    const apiKey = solarClient.getManagementApiKey();
+    let cancelled = false;
+    let socket: Socket | null = null;
 
-    if (!baseUrl) {
-      console.warn('EventStream: No base URL for Socket.IO');
-      return;
-    }
+    const connect = async () => {
+      const baseUrl = solarClient.getControlSocketIOUrl();
+      const path = solarClient.getSocketIOPath();
+      const apiKey = await solarClient.fetchManagementApiKey();
 
-    // Connect to /webui namespace (namespace is in the URL path)
-    const urlWithNamespace = baseUrl.replace(/\/$/, '') + '/webui';
-    console.log('EventStream: Connecting to', urlWithNamespace, 'path:', path);
+      if (cancelled) return;
 
-    const socket = io(urlWithNamespace, {
-      path,
-      transports: ['websocket'],
-      auth: { api_key: apiKey },
-      autoConnect: true,
-    });
+      if (!baseUrl) {
+        console.warn('EventStream: No base URL for Socket.IO');
+        return;
+      }
 
-    socketRef.current = socket;
-    const webuiSocket = socket;
+      // Connect to /webui namespace (namespace is in the URL path)
+      const urlWithNamespace = baseUrl.replace(/\/$/, '') + '/webui';
+      console.log('EventStream: Connecting to', urlWithNamespace, 'path:', path, 'hasKey:', !!apiKey);
+
+      socket = io(urlWithNamespace, {
+        path,
+        transports: ['websocket'],
+        auth: { api_key: apiKey },
+        autoConnect: true,
+      });
+
+      if (cancelled) {
+        socket.disconnect();
+        return;
+      }
+
+      socketRef.current = socket;
+      const webuiSocket = socket;
 
     webuiSocket.on('connect', () => {
       console.log('EventStream: Connected');
@@ -519,10 +530,16 @@ export function useEventStream(handlers: EventHandlers = {}) {
       type: 'filter_status',
       filter: payload?.filter ?? payload,
     }));
+    };
+
+    connect();
 
     return () => {
-      socket.disconnect();
-      socket.removeAllListeners();
+      cancelled = true;
+      if (socket) {
+        socket.disconnect();
+        socket.removeAllListeners();
+      }
       socketRef.current = null;
     };
   }, [handleEvent]);
