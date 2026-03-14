@@ -23,6 +23,7 @@ export type WSMessageType =
   | 'host_status'
   | 'host_pending'
   | 'host_pending_removed'
+  | 'instances_update'
   | 'log'
   | 'instance_state'
   | 'host_health'
@@ -34,6 +35,15 @@ export type WSMessageType =
   | 'gateway_request'
   | 'filter_status'
   | 'keepalive';
+
+export interface InstanceSummary {
+  id: string;
+  alias?: string;
+  status: string;
+  port?: number;
+  backend_type?: string;
+  supported_endpoints?: string[];
+}
 
 export interface HostStatusData {
   host_id: string;
@@ -177,6 +187,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [hosts, setHosts] = useState<Map<string, HostStatusData>>(new Map());
   const [pendingHosts, setPendingHosts] = useState<Map<string, PendingHost>>(new Map());
+  const [hostInstances, setHostInstances] = useState<Map<string, InstanceSummary[]>>(new Map());
   const [requests, setRequests] = useState<Map<string, RequestState>>(new Map());
   const [instanceStates, setInstanceStates] = useState<Map<string, InstanceStateData>>(new Map());
   const [logs, setLogs] = useState<Map<string, LogMessage[]>>(new Map());
@@ -273,6 +284,16 @@ export function useEventStream(handlers: EventHandlers = {}) {
           setPendingHosts((prev) => {
             const newMap = new Map(prev);
             newMap.delete(event.data.pending_id);
+            return newMap;
+          });
+        }
+        break;
+
+      case 'instances_update':
+        if (event.data?.host_id && Array.isArray(event.data?.instances)) {
+          setHostInstances((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(event.data.host_id, event.data.instances);
             return newMap;
           });
         }
@@ -501,6 +522,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
     bindEvent('host_status', (payload) => ({ type: 'host_status', data: payload }));
     bindEvent('host_pending', (payload) => ({ type: 'host_pending', data: payload }));
     bindEvent('host_pending_removed', (payload) => ({ type: 'host_pending_removed', data: payload }));
+    bindEvent('instances_update', (payload) => ({ type: 'instances_update', data: payload }));
     bindEvent('host_health', (payload) => ({
       type: 'host_health',
       host_id: payload?.host_id,
@@ -573,6 +595,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
     isConnected,
     hosts,
     pendingHosts,
+    hostInstances,
     requests,
     instanceStates,
     logs,

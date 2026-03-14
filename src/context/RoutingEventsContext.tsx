@@ -8,6 +8,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, ReactNode } from 'react';
 import { EventStreamProvider, useEventStreamContext, HostStatusData, RequestState } from './EventStreamContext';
+import { InstanceSummary } from '@/hooks/useEventStream';
 import { PendingHost } from '@/api/types';
 
 export interface RoutingEvent {
@@ -41,6 +42,7 @@ interface RoutingEventsContextValue {
   statusConnected: boolean;
   hostStatuses: Map<string, HostStatusData>;
   pendingHosts: Map<string, PendingHost>;
+  hostInstances: Map<string, InstanceSummary[]>;
 }
 
 const RoutingEventsContext = createContext<RoutingEventsContextValue | undefined>(undefined);
@@ -72,7 +74,8 @@ function RoutingEventsInner({ children }: { children: ReactNode }) {
     statusConnected: eventStream.isConnected,
     hostStatuses: eventStream.hosts,
     pendingHosts: eventStream.pendingHosts,
-  }), [eventStream.requests, eventStream.removeRequest, eventStream.isConnected, eventStream.hosts, eventStream.pendingHosts, events, addRecentEvents]);
+    hostInstances: eventStream.hostInstances,
+  }), [eventStream.requests, eventStream.removeRequest, eventStream.isConnected, eventStream.hosts, eventStream.pendingHosts, eventStream.hostInstances, events, addRecentEvents]);
 
   return (
     <RoutingEventsContext.Provider value={value}>

@@ -23,6 +23,7 @@ import { useInstanceState } from '@/hooks/useInstanceState';
 interface InstanceCardProps {
   instance: Instance;
   hostId: string;
+  hostReachable?: boolean;
   onStart: (hostId: string, instanceId: string) => Promise<void>;
   onStop: (hostId: string, instanceId: string) => Promise<void>;
   onRestart: (hostId: string, instanceId: string) => Promise<void>;
@@ -61,6 +62,7 @@ const BackendIcon = ({ config }: { config: InstanceConfig }) => {
 export function InstanceCard({
   instance,
   hostId,
+  hostReachable = true,
   onStart,
   onStop,
   onRestart,
@@ -69,6 +71,7 @@ export function InstanceCard({
   dragListeners,
 }: InstanceCardProps) {
   const [loading, setLoading] = useState(false);
+  const actionsDisabled = loading || !hostReachable;
   const [showLogs, setShowLogs] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
 
@@ -270,17 +273,17 @@ export function InstanceCard({
               <>
                 <button
                   onClick={() => setShowEdit(true)}
-                  disabled={loading}
+                  disabled={actionsDisabled}
                   className="p-1 hover:bg-nord-10 hover:bg-opacity-20 text-nord-10 rounded transition-colors disabled:opacity-50"
-                  title="Edit instance"
+                  title={hostReachable ? "Edit instance" : "Host is offline"}
                 >
                   <Edit size={16} />
                 </button>
                 <button
                   onClick={() => handleAction(() => onDelete(hostId, instance.id))}
-                  disabled={loading}
+                  disabled={actionsDisabled}
                   className="p-1 hover:bg-nord-11 hover:bg-opacity-20 text-nord-11 rounded transition-colors disabled:opacity-50"
-                  title="Delete instance"
+                  title={hostReachable ? "Delete instance" : "Host is offline"}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -366,8 +369,9 @@ export function InstanceCard({
           {instance.status === 'stopped' || instance.status === 'failed' ? (
             <button
               onClick={() => handleAction(() => onStart(hostId, instance.id))}
-              disabled={loading}
+              disabled={actionsDisabled}
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-nord-14 text-nord-0 rounded hover:bg-opacity-90 transition-colors disabled:opacity-50 font-medium"
+              title={hostReachable ? "Start instance" : "Host is offline"}
             >
               <Play size={16} />
               Start
@@ -376,16 +380,18 @@ export function InstanceCard({
             <>
               <button
                 onClick={() => handleAction(() => onStop(hostId, instance.id))}
-                disabled={loading}
+                disabled={actionsDisabled}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-nord-11 text-nord-6 rounded hover:bg-opacity-90 transition-colors disabled:opacity-50 font-medium"
+                title={hostReachable ? "Stop instance" : "Host is offline"}
               >
                 <Square size={16} />
                 Stop
               </button>
               <button
                 onClick={() => handleAction(() => onRestart(hostId, instance.id))}
-                disabled={loading}
+                disabled={actionsDisabled}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-nord-10 text-nord-6 rounded hover:bg-nord-9 transition-colors disabled:opacity-50 font-medium"
+                title={hostReachable ? "Restart instance" : "Host is offline"}
               >
                 <RotateCw size={16} />
                 Restart

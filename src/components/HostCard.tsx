@@ -32,6 +32,7 @@ interface HostCardProps {
     memory?: MemoryInfo;
     instances: Instance[];
   };
+  hostReachable: boolean;
   onReorderInstance: (hostId: string, activeId: string, overId: string) => void;
   onStartInstance: (hostId: string, instanceId: string) => Promise<void>;
   onStopInstance: (hostId: string, instanceId: string) => Promise<void>;
@@ -76,6 +77,7 @@ const getCategoryLabel = (category: ModelCategory): string => {
 function SortableInstanceCard({
   instance,
   hostId,
+  hostReachable,
   onStart,
   onStop,
   onRestart,
@@ -84,6 +86,7 @@ function SortableInstanceCard({
 }: {
   instance: Instance;
   hostId: string;
+  hostReachable: boolean;
   onStart: (hostId: string, instanceId: string) => Promise<void>;
   onStop: (hostId: string, instanceId: string) => Promise<void>;
   onRestart: (hostId: string, instanceId: string) => Promise<void>;
@@ -111,6 +114,7 @@ function SortableInstanceCard({
       <InstanceCard
         instance={instance}
         hostId={hostId}
+        hostReachable={hostReachable}
         onStart={onStart}
         onStop={onStop}
         onRestart={onRestart}
@@ -124,6 +128,7 @@ function SortableInstanceCard({
 
 export function HostCard({
   host,
+  hostReachable,
   onReorderInstance,
   onStartInstance,
   onStopInstance,
@@ -223,6 +228,11 @@ export function HostCard({
             >
               {host.status}
             </span>
+            {!hostReachable && (
+              <span className="px-2 py-1 rounded-full text-xs font-medium bg-nord-11 bg-opacity-30 text-nord-11">
+                disconnected
+              </span>
+            )}
             <button
               onClick={() => onDeleteHost(host.id)}
               className="p-2 hover:bg-nord-8 hover:bg-opacity-30 rounded transition-colors text-nord-6"
@@ -263,8 +273,14 @@ export function HostCard({
             {host.last_seen && <span>Last seen: {formatDate(host.last_seen)}</span>}
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-1 px-3 py-1 bg-nord-6 hover:bg-nord-5 rounded transition-colors text-sm font-medium text-nord-0 shadow-md"
-              title="Add instance"
+              disabled={!hostReachable}
+              className={cn(
+                "flex items-center gap-1 px-3 py-1 rounded transition-colors text-sm font-medium shadow-md",
+                hostReachable
+                  ? "bg-nord-6 hover:bg-nord-5 text-nord-0"
+                  : "bg-nord-3 text-nord-4 cursor-not-allowed opacity-60"
+              )}
+              title={hostReachable ? "Add instance" : "Host is offline"}
             >
               <Plus size={16} />
               Add Instance
@@ -296,7 +312,14 @@ export function HostCard({
             <p>No instances configured</p>
             <button
               onClick={() => setShowAddModal(true)}
-              className="mt-4 px-6 py-3 bg-nord-10 text-nord-6 rounded-lg hover:bg-nord-9 transition-colors font-medium shadow-md"
+              disabled={!hostReachable}
+              className={cn(
+                "mt-4 px-6 py-3 rounded-lg transition-colors font-medium shadow-md",
+                hostReachable
+                  ? "bg-nord-10 text-nord-6 hover:bg-nord-9"
+                  : "bg-nord-3 text-nord-4 cursor-not-allowed opacity-60"
+              )}
+              title={hostReachable ? undefined : "Host is offline"}
             >
               <Plus size={20} className="inline-block mr-2" />
               Add First Instance
@@ -318,6 +341,7 @@ export function HostCard({
                     key={instance.id}
                     instance={instance}
                     hostId={host.id}
+                    hostReachable={hostReachable}
                     onStart={onStartInstance}
                     onStop={onStopInstance}
                     onRestart={onRestartInstance}

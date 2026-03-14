@@ -33,6 +33,7 @@ interface UnifiedTableProps {
     name: string;
     instances: Instance[];
   }>;
+  isHostReachable: (hostId: string) => boolean;
   onStartInstance: (hostId: string, instanceId: string) => Promise<void>;
   onStopInstance: (hostId: string, instanceId: string) => Promise<void>;
   onRestartInstance: (hostId: string, instanceId: string) => Promise<void>;
@@ -72,6 +73,7 @@ function truncateModel(model: string, maxLen = 40): string {
 
 export function UnifiedTable({
   hosts,
+  isHostReachable,
   onStartInstance,
   onStopInstance,
   onRestartInstance,
@@ -140,12 +142,18 @@ export function UnifiedTable({
           <tbody className="divide-y divide-nord-3">
             {rows.map(({ instance, host }) => {
               const isLoading = loadingId === instance.id;
+              const reachable = isHostReachable(host.id);
+              const disabled = isLoading || !reachable;
+              const offlineTitle = reachable ? undefined : "Host is offline";
               const model = getModelDisplay(instance.config);
 
               return (
                 <tr
                   key={`${host.id}-${instance.id}`}
-                  className="bg-nord-1 hover:bg-nord-2 transition-colors"
+                  className={cn(
+                    "bg-nord-1 hover:bg-nord-2 transition-colors",
+                    !reachable && "opacity-70"
+                  )}
                 >
                   {/* Alias */}
                   <td className="px-3 py-1.5 font-medium text-nord-6 whitespace-nowrap">
@@ -183,7 +191,12 @@ export function UnifiedTable({
 
                   {/* Host */}
                   <td className="px-3 py-1.5 text-nord-4 whitespace-nowrap text-xs">
-                    {host.name}
+                    <span className="flex items-center gap-1">
+                      {host.name}
+                      {!reachable && (
+                        <span className="inline-block w-2 h-2 rounded-full bg-nord-11 flex-shrink-0" title="Disconnected" />
+                      )}
+                    </span>
                   </td>
 
                   {/* Port */}
@@ -203,25 +216,25 @@ export function UnifiedTable({
                         <>
                           <button
                             onClick={() => handleAction(instance.id, () => onStartInstance(host.id, instance.id))}
-                            disabled={isLoading}
+                            disabled={disabled}
                             className="p-1 rounded hover:bg-nord-14 hover:bg-opacity-20 text-nord-14 transition-colors disabled:opacity-50"
-                            title="Start"
+                            title={offlineTitle || "Start"}
                           >
                             <Play size={14} />
                           </button>
                           <button
                             onClick={() => setShowEditFor({ instance, hostId: host.id })}
-                            disabled={isLoading}
+                            disabled={disabled}
                             className="p-1 rounded hover:bg-nord-10 hover:bg-opacity-20 text-nord-10 transition-colors disabled:opacity-50"
-                            title="Edit"
+                            title={offlineTitle || "Edit"}
                           >
                             <Edit size={14} />
                           </button>
                           <button
                             onClick={() => handleAction(instance.id, () => onDeleteInstance(host.id, instance.id))}
-                            disabled={isLoading}
+                            disabled={disabled}
                             className="p-1 rounded hover:bg-nord-11 hover:bg-opacity-20 text-nord-11 transition-colors disabled:opacity-50"
-                            title="Delete"
+                            title={offlineTitle || "Delete"}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -232,17 +245,17 @@ export function UnifiedTable({
                         <>
                           <button
                             onClick={() => handleAction(instance.id, () => onStopInstance(host.id, instance.id))}
-                            disabled={isLoading}
+                            disabled={disabled}
                             className="p-1 rounded hover:bg-nord-11 hover:bg-opacity-20 text-nord-11 transition-colors disabled:opacity-50"
-                            title="Stop"
+                            title={offlineTitle || "Stop"}
                           >
                             <Square size={14} />
                           </button>
                           <button
                             onClick={() => handleAction(instance.id, () => onRestartInstance(host.id, instance.id))}
-                            disabled={isLoading}
+                            disabled={disabled}
                             className="p-1 rounded hover:bg-nord-10 hover:bg-opacity-20 text-nord-10 transition-colors disabled:opacity-50"
-                            title="Restart"
+                            title={offlineTitle || "Restart"}
                           >
                             <RotateCw size={14} />
                           </button>

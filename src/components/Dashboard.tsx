@@ -46,6 +46,7 @@ export function Dashboard() {
     restartInstance,
     reorderHost,
     reorderInstance,
+    isHostReachable,
   } = useInstances();
   const { pendingHosts } = useRoutingEventsContext();
   
@@ -228,6 +229,7 @@ export function Dashboard() {
           /* Unified table view */
           <UnifiedTable
             hosts={hosts}
+            isHostReachable={isHostReachable}
             onStartInstance={startInstance}
             onStopInstance={stopInstance}
             onRestartInstance={restartInstance}
@@ -250,6 +252,7 @@ export function Dashboard() {
                   <HostCard
                     key={host.id}
                     host={host}
+                    hostReachable={isHostReachable(host.id)}
                     onReorderInstance={(hostId, activeId, overId) => reorderInstance(hostId, activeId, overId)}
                     onStartInstance={startInstance}
                     onStopInstance={stopInstance}

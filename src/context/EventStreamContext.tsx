@@ -10,6 +10,7 @@ import {
   useEventStream,
   HostStatusData,
   InstanceStateData,
+  InstanceSummary,
   RequestState,
   WSMessageType,
   RoutingEventData,
@@ -24,6 +25,7 @@ interface EventStreamContextValue {
   isConnected: boolean;
   hosts: Map<string, HostStatusData>;
   pendingHosts: Map<string, PendingHost>;
+  hostInstances: Map<string, InstanceSummary[]>;
   requests: Map<string, RequestState>;
   instanceStates: Map<string, InstanceStateData>;
   logs: Map<string, LogMessage[]>;
@@ -66,6 +68,7 @@ export function useEventStreamContext(): EventStreamContextValue {
 export type {
   HostStatusData,
   InstanceStateData,
+  InstanceSummary,
   RequestState,
   WSMessageType,
   RoutingEventData,

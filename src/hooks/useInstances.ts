@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import solarClient from '@/api/client';
 import { Host, Instance } from '@/api/types';
 import { useRoutingEventsContext } from '@/context/RoutingEventsContext';
+import { InstanceSummary } from '@/hooks/useEventStream';
 
 interface HostWithInstances extends Host {
   instances: Instance[];
@@ -36,7 +37,6 @@ function writeInstanceOrder(hostId: string, order: string[]) {
   localStorage.setItem(INSTANCE_ORDER_KEY_PREFIX + hostId, JSON.stringify(order));
 }
 
-/** Sort an array of items by a saved order array. Items not in the saved order appear at the end. */
 function applySavedOrder<T extends { id: string }>(items: T[], savedOrder: string[]): T[] {
   if (savedOrder.length === 0) return items;
 
@@ -47,98 +47,180 @@ function applySavedOrder<T extends { id: string }>(items: T[], savedOrder: strin
     if (ia !== undefined && ib !== undefined) return ia - ib;
     if (ia !== undefined) return -1;
     if (ib !== undefined) return 1;
-    return 0; // both unknown – preserve original order
+    return 0;
   });
   return sorted;
 }
 
-export function useInstances(refreshInterval = 30000) {
-  // Increased default to 30s since WebSocket handles real-time updates
+/**
+ * Merge Socket.IO InstanceSummary data into the full REST Instance objects.
+ * Updates status fields from the socket data; preserves full config from REST.
+ * If the socket reports instances that don't exist in REST data, returns
+ * their IDs so the caller can lazy-hydrate them.
+ */
+function mergeInstanceData(
+  restInstances: Instance[],
+  socketInstances: InstanceSummary[] | undefined,
+): { merged: Instance[]; unknownIds: string[] } {
+  if (!socketInstances) return { merged: restInstances, unknownIds: [] };
+
+  const restMap = new Map(restInstances.map((i) => [i.id, i]));
+  const merged: Instance[] = [];
+  const unknownIds: string[] = [];
+
+  for (const si of socketInstances) {
+    const existing = restMap.get(si.id);
+    if (existing) {
+      merged.push({
+        ...existing,
+        status: si.status || existing.status,
+      });
+      restMap.delete(si.id);
+    } else {
+      unknownIds.push(si.id);
+      merged.push({
+        id: si.id,
+        config: {
+          backend_type: (si.backend_type || 'llamacpp') as any,
+          alias: si.alias || si.id,
+          host: '0.0.0.0',
+          port: si.port || 0,
+          model: '',
+        } as any,
+        status: si.status || 'unknown',
+        port: si.port || 0,
+        created_at: new Date().toISOString(),
+        retry_count: 0,
+        supported_endpoints: si.supported_endpoints || [],
+      } as Instance);
+    }
+  }
+
+  return { merged, unknownIds };
+}
+
+export function useInstances() {
   const [hosts, setHosts] = useState<HostWithInstances[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { hostStatuses, routingConnected } = useRoutingEventsContext();
+  const { hostStatuses, hostInstances, routingConnected } = useRoutingEventsContext();
 
-  // Ordering state – triggers re-render when user reorders
   const [hostOrder, setHostOrder] = useState<string[]>(readHostOrder);
-  const [instanceOrders, setInstanceOrders] = useState<Record<string, string[]>>(() => {
-    // We'll lazily populate per-host orders as needed
-    return {};
-  });
+  const [instanceOrders, setInstanceOrders] = useState<Record<string, string[]>>(() => ({}));
 
   const fetchData = useCallback(async () => {
     try {
       setError(null);
-      
-      // Fetch all hosts
       const hostsData = await solarClient.getHosts();
-      
-      // Fetch instances for each host
+
       const hostsWithInstances = await Promise.all(
         hostsData.map(async (host) => {
           try {
             const instances = await solarClient.getHostInstances(host.id);
             return { ...host, instances };
-          } catch (err) {
-            console.error(`Failed to fetch instances for host ${host.name}:`, err);
+          } catch {
             return { ...host, instances: [] };
           }
         })
       );
-      
+
       setHosts(hostsWithInstances);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      console.error('Failed to fetch hosts:', err);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  // Initial fetch
+  // One-time REST fetch on mount
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // Auto-refresh at a slower rate (WebSocket handles real-time updates)
+  // Lazy hydration: when Socket.IO reports unknown instance IDs, fetch that
+  // host's instances via REST once to get full config data.
   useEffect(() => {
-    // If connected via WebSocket, poll less frequently
-    const interval = routingConnected ? refreshInterval : 10000;
-    const timer = setInterval(fetchData, interval);
-    return () => clearInterval(timer);
-  }, [fetchData, refreshInterval, routingConnected]);
+    if (!hostInstances || hostInstances.size === 0) return;
+
+    const hostsToHydrate: string[] = [];
+    for (const [hostId, socketInsts] of hostInstances) {
+      const host = hosts.find((h) => h.id === hostId);
+      if (!host) continue;
+      const restIds = new Set(host.instances.map((i) => i.id));
+      const hasUnknown = socketInsts.some((si) => !restIds.has(si.id));
+      if (hasUnknown) hostsToHydrate.push(hostId);
+    }
+
+    if (hostsToHydrate.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      for (const hostId of hostsToHydrate) {
+        if (cancelled) break;
+        try {
+          const instances = await solarClient.getHostInstances(hostId);
+          if (cancelled) break;
+          setHosts((prev) =>
+            prev.map((h) => (h.id === hostId ? { ...h, instances } : h))
+          );
+        } catch { /* host might be offline, the socket data is enough */ }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [hostInstances, hosts]);
+
+  // When a new host appears in hostStatuses but not in our hosts list, add it
+  useEffect(() => {
+    if (!hostStatuses || hostStatuses.size === 0) return;
+    const existingIds = new Set(hosts.map((h) => h.id));
+    const newHostIds = [...hostStatuses.keys()].filter((id) => !existingIds.has(id));
+    if (newHostIds.length === 0) return;
+
+    let cancelled = false;
+    (async () => {
+      for (const hostId of newHostIds) {
+        if (cancelled) break;
+        try {
+          const allHosts = await solarClient.getHosts();
+          const newHost = allHosts.find((h) => h.id === hostId);
+          if (!newHost || cancelled) continue;
+          let instances: Instance[] = [];
+          try {
+            instances = await solarClient.getHostInstances(hostId);
+          } catch { /* ok */ }
+          if (cancelled) break;
+          setHosts((prev) => {
+            if (prev.some((h) => h.id === hostId)) return prev;
+            return [...prev, { ...newHost, instances }];
+          });
+        } catch { /* ignore */ }
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [hostStatuses, hosts]);
 
   const startInstance = useCallback(async (hostId: string, instanceId: string) => {
-    try {
-      await solarClient.startInstance(hostId, instanceId);
-      // Immediate refresh after action
-      await fetchData();
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to start instance');
-    }
-  }, [fetchData]);
+    await solarClient.startInstance(hostId, instanceId);
+  }, []);
 
   const stopInstance = useCallback(async (hostId: string, instanceId: string) => {
-    try {
-      await solarClient.stopInstance(hostId, instanceId);
-      await fetchData();
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to stop instance');
-    }
-  }, [fetchData]);
+    await solarClient.stopInstance(hostId, instanceId);
+  }, []);
 
   const restartInstance = useCallback(async (hostId: string, instanceId: string) => {
-    try {
-      await solarClient.restartInstance(hostId, instanceId);
-      await fetchData();
-    } catch (err) {
-      throw new Error(err instanceof Error ? err.message : 'Failed to restart instance');
-    }
-  }, [fetchData]);
+    await solarClient.restartInstance(hostId, instanceId);
+  }, []);
 
-  // --- Reorder functions (drag-and-drop based) ---
+  const isHostReachable = useCallback(
+    (hostId: string): boolean => {
+      const status = hostStatuses?.get(hostId);
+      return status?.connected === true;
+    },
+    [hostStatuses],
+  );
 
-  /** Move a host so it lands at the position of another host (by ID). */
   const reorderHost = useCallback((activeId: string, overId: string) => {
     setHostOrder((prev) => {
       const currentIds = hosts.map((h) => h.id);
@@ -159,7 +241,6 @@ export function useInstances(refreshInterval = 30000) {
     });
   }, [hosts]);
 
-  /** Move an instance within a host so it lands at the position of another instance (by ID). */
   const reorderInstance = useCallback((hostId: string, activeId: string, overId: string) => {
     setInstanceOrders((prev) => {
       const host = hosts.find((h) => h.id === hostId);
@@ -184,7 +265,6 @@ export function useInstances(refreshInterval = 30000) {
     });
   }, [hosts]);
 
-  // Merge WebSocket status updates into hosts data, apply saved ordering
   const mergedHosts = useMemo(() => {
     let result = hosts.map((host) => {
       const wsStatus = hostStatuses?.get(host.id);
@@ -196,18 +276,20 @@ export function useInstances(refreshInterval = 30000) {
           }
         : host;
 
-      // Sort instances within this host
+      // Merge Socket.IO instance data with REST data
+      const socketInsts = hostInstances?.get(host.id);
+      const { merged: mergedInstances } = mergeInstanceData(base.instances, socketInsts);
+
       const savedInstanceOrder = instanceOrders[host.id] ?? readInstanceOrder(host.id);
-      const sortedInstances = applySavedOrder(base.instances, savedInstanceOrder);
+      const sortedInstances = applySavedOrder(mergedInstances, savedInstanceOrder);
 
       return { ...base, instances: sortedInstances };
     });
 
-    // Sort hosts by saved order
     result = applySavedOrder(result, hostOrder);
 
     return result;
-  }, [hosts, hostStatuses, hostOrder, instanceOrders]);
+  }, [hosts, hostStatuses, hostInstances, hostOrder, instanceOrders]);
 
   return {
     hosts: mergedHosts,
@@ -219,5 +301,7 @@ export function useInstances(refreshInterval = 30000) {
     restartInstance,
     reorderHost,
     reorderInstance,
+    isHostReachable,
+    isConnected: routingConnected,
   };
 }
