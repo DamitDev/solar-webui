@@ -84,6 +84,9 @@ const getDefaultConfig = (primary: PrimaryBackend, mode: string): Partial<Instan
       reasoning_budget: undefined,
       cache_type_k: '',
       cache_type_v: '',
+      rope_scaling: '',
+      rope_scale: undefined,
+      yarn_orig_ctx: undefined,
       special: false,
       ot: '',
       model_type: mode as LlamaCppMode,
@@ -607,6 +610,67 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                     </select>
                     <p className="text-xs text-nord-4 mt-1">
                       KV cache quantization for values (<code>-ctv</code>).
+                    </p>
+                  </div>
+
+                  {/* RoPE Scaling */}
+                  <div>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">
+                      RoPE Scaling
+                    </label>
+                    <select
+                      name="rope_scaling"
+                      value={(formData as Partial<LlamaCppConfig>).rope_scaling || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                    >
+                      <option value="">Default</option>
+                      <option value="none">none</option>
+                      <option value="linear">linear</option>
+                      <option value="yarn">yarn</option>
+                    </select>
+                    <p className="text-xs text-nord-4 mt-1">
+                      RoPE scaling method (<code>--rope-scaling</code>).
+                    </p>
+                  </div>
+
+                  {/* RoPE Scale */}
+                  <div>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">
+                      RoPE Scale
+                    </label>
+                    <input
+                      type="number"
+                      name="rope_scale"
+                      value={(formData as Partial<LlamaCppConfig>).rope_scale ?? ''}
+                      onChange={handleChange}
+                      placeholder="Blank = omit"
+                      min="1"
+                      step="0.1"
+                      className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                    />
+                    <p className="text-xs text-nord-4 mt-1">
+                      RoPE context scaling factor (<code>--rope-scale</code>).
+                    </p>
+                  </div>
+
+                  {/* YaRN Original Context */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-nord-4 mb-1">
+                      YaRN Original Context
+                    </label>
+                    <input
+                      type="number"
+                      name="yarn_orig_ctx"
+                      value={(formData as Partial<LlamaCppConfig>).yarn_orig_ctx ?? ''}
+                      onChange={handleChange}
+                      placeholder="Blank = omit"
+                      min="1"
+                      step="1"
+                      className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                    />
+                    <p className="text-xs text-nord-4 mt-1">
+                      Original context size for YaRN (<code>--yarn-orig-ctx</code>).
                     </p>
                   </div>
 

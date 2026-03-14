@@ -38,6 +38,9 @@ export interface LlamaCppConfig extends BaseInstanceConfig {
   reasoning_budget?: number;
   cache_type_k?: string;
   cache_type_v?: string;
+  rope_scaling?: string;
+  rope_scale?: number;
+  yarn_orig_ctx?: number;
   special?: boolean;
   ot?: string;
   model_type?: 'llm' | 'embedding' | 'reranker';
