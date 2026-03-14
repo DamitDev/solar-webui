@@ -15,12 +15,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 import solarClient from '@/api/client';
-import { MemoryInfo, LogMessage } from '@/api/types';
+import { MemoryInfo, LogMessage, PendingHost } from '@/api/types';
 
 // Event type definitions
 export type WSMessageType =
   | 'initial_status'
   | 'host_status'
+  | 'host_pending'
+  | 'host_pending_removed'
   | 'log'
   | 'instance_state'
   | 'host_health'
@@ -174,6 +176,7 @@ const DEFAULT_FILTER: GatewayFilter = {
 export function useEventStream(handlers: EventHandlers = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [hosts, setHosts] = useState<Map<string, HostStatusData>>(new Map());
+  const [pendingHosts, setPendingHosts] = useState<Map<string, PendingHost>>(new Map());
   const [requests, setRequests] = useState<Map<string, RequestState>>(new Map());
   const [instanceStates, setInstanceStates] = useState<Map<string, InstanceStateData>>(new Map());
   const [logs, setLogs] = useState<Map<string, LogMessage[]>>(new Map());
@@ -252,6 +255,26 @@ export function useEventStream(handlers: EventHandlers = {}) {
             return newMap;
           });
           h.onHostStatus?.(event.data);
+        }
+        break;
+
+      case 'host_pending':
+        if (event.data?.pending_id) {
+          setPendingHosts((prev) => {
+            const newMap = new Map(prev);
+            newMap.set(event.data.pending_id, event.data as PendingHost);
+            return newMap;
+          });
+        }
+        break;
+
+      case 'host_pending_removed':
+        if (event.data?.pending_id) {
+          setPendingHosts((prev) => {
+            const newMap = new Map(prev);
+            newMap.delete(event.data.pending_id);
+            return newMap;
+          });
         }
         break;
 
@@ -465,6 +488,8 @@ export function useEventStream(handlers: EventHandlers = {}) {
 
     bindEvent('initial_status', (payload) => ({ type: 'initial_status', data: payload }));
     bindEvent('host_status', (payload) => ({ type: 'host_status', data: payload }));
+    bindEvent('host_pending', (payload) => ({ type: 'host_pending', data: payload }));
+    bindEvent('host_pending_removed', (payload) => ({ type: 'host_pending_removed', data: payload }));
     bindEvent('host_health', (payload) => ({
       type: 'host_health',
       host_id: payload?.host_id,
@@ -530,6 +555,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
   return {
     isConnected,
     hosts,
+    pendingHosts,
     requests,
     instanceStates,
     logs,

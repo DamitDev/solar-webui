@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useInstances } from '@/hooks/useInstances';
+import { useRoutingEventsContext } from '@/context/RoutingEventsContext';
 import { HostCard } from './HostCard';
 import { UnifiedTable } from './UnifiedTable';
 import { AddHostModal } from './AddHostModal';
+import { PendingHostBanner } from './PendingHostBanner';
 import { Plus, RefreshCw, AlertCircle, Server, LayoutGrid, Table2 } from 'lucide-react';
 import solarClient from '@/api/client';
 import { cn } from '@/lib/utils';
@@ -45,6 +47,7 @@ export function Dashboard() {
     reorderHost,
     reorderInstance,
   } = useInstances();
+  const { pendingHosts } = useRoutingEventsContext();
   
   const [showAddHost, setShowAddHost] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -198,6 +201,10 @@ export function Dashboard() {
               <p className="text-sm text-nord-4">{error}</p>
             </div>
           </div>
+        )}
+
+        {pendingHosts.size > 0 && (
+          <PendingHostBanner pendingHosts={pendingHosts} onApproved={refresh} />
         )}
 
         {hosts.length === 0 ? (

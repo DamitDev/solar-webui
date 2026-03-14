@@ -18,11 +18,12 @@ import {
   GatewayRequestSummary,
   GatewayFilter,
 } from '@/hooks/useEventStream';
-import { LogMessage } from '@/api/types';
+import { LogMessage, PendingHost } from '@/api/types';
 
 interface EventStreamContextValue {
   isConnected: boolean;
   hosts: Map<string, HostStatusData>;
+  pendingHosts: Map<string, PendingHost>;
   requests: Map<string, RequestState>;
   instanceStates: Map<string, InstanceStateData>;
   logs: Map<string, LogMessage[]>;

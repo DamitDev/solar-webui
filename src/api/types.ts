@@ -296,6 +296,19 @@ export interface HostCreateRequest {
   api_key: string;
 }
 
+export interface PendingHost {
+  pending_id: string;
+  api_key_preview: string;
+  host_name: string;
+  instance_count?: number;
+  connected_at: string;
+}
+
+export interface PendingHostApproveRequest {
+  name: string;
+  url: string;
+}
+
 export interface InstanceCreateRequest {
   config: InstanceConfig;
 }

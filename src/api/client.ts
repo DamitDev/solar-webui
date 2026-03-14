@@ -12,6 +12,8 @@ import {
   EndpointCreateRequest,
   EndpointUpdateRequest,
   EndpointUsageResponse,
+  PendingHost,
+  PendingHostApproveRequest,
 } from './types';
 
 const DEFAULT_RELATIVE_CONTROL_BASE = '/api/control';
@@ -98,6 +100,22 @@ class SolarClient {
 
   async refreshAllHosts(): Promise<{ message: string; results: Array<{ host_id: string; name: string; status: string; message: string }> }> {
     const response = await this.client.post('/api/hosts/refresh-all');
+    return response.data;
+  }
+
+  // Pending host approval
+  async getPendingHosts(): Promise<PendingHost[]> {
+    const response = await this.client.get('/api/hosts/pending');
+    return response.data;
+  }
+
+  async approveHost(pendingId: string, data: PendingHostApproveRequest): Promise<{ host: Host; message: string }> {
+    const response = await this.client.post(`/api/hosts/pending/${pendingId}/approve`, data);
+    return response.data;
+  }
+
+  async rejectHost(pendingId: string): Promise<{ message: string }> {
+    const response = await this.client.post(`/api/hosts/pending/${pendingId}/reject`);
     return response.data;
   }
 
