@@ -18,11 +18,13 @@ Manage all your hosts and model instances from a beautiful, unified interface.
 
 - **Multi-backend support** - Manage llama.cpp, HuggingFace Causal LM, Classification, and Embedding models
 - **Real-time routing visualization** - Interactive network graph showing API request flow
-- **Dashboard view** - Manage all solar-hosts and model instances
+- **Dashboard view** - Manage all solar-hosts and model instances via Socket.IO (`/webui` namespace)
+- **Pending host approval** - See and approve or reject hosts that register with solar-control before they join the pool
 - **Live log streaming** - Real-time WebSocket log viewer for each instance
 - **Instance management** - Start, stop, restart, create, edit, and delete instances
 - **Host management** - Add, remove, and monitor solar-host connections
 - **Backend-aware UI** - Visual distinction between backend types with icons and colors
+- **Runtime config** - API key injected by the server into the page at runtime (no build-time env needed for Docker)
 - **Nord dark theme** - Beautiful arctic-inspired color scheme
 - **Modern UI** - Built with React, TypeScript, Vite, and Tailwind CSS
 
@@ -44,13 +46,13 @@ npm install
 
 ## Configuration
 
-The webui now ships with a built-in middleware proxy with **HTTP keep-alive optimizations** for low-latency performance. Configure it using environment variables (either via a `.env` file or by exporting them in your shell):
+The webui ships with a built-in middleware proxy with **HTTP keep-alive optimizations** for low-latency performance. Configure it using environment variables (either via a `.env` file or by exporting them in your shell):
 
 ```bash
 # URL of your solar-control deployment
 SOLAR_CONTROL_URL=http://localhost:8000
 
-# API key required by solar-control
+# Management API key (solar-control). Required for REST and Socket.IO.
 SOLAR_CONTROL_API_KEY=your-solar-control-api-key
 
 # Optional: port for the middleware server (defaults to 8080)
@@ -60,14 +62,16 @@ SOLAR_CONTROL_API_KEY=your-solar-control-api-key
 # SOLAR_WEBUI_DEBUG=true
 ```
 
-These values are consumed both by the Vite development proxy and the production middleware server. They are never exposed to the browser.
+- **Production (Express server):** The server reads these at startup and (1) injects `X-API-Key` and `Authorization` on **every** proxied request and on **WebSocket upgrade** requests (so Socket.IO to solar-control is authenticated), and (2) injects `window.__SOLAR_CONFIG__ = { SOLAR_CONTROL_API_KEY: "..." }` into the served `index.html` so the client can send the key in Socket.IO `auth` as well. No build-time env vars are required in Docker.
+- **Development (Vite):** Use `VITE_SOLAR_CONTROL_API_KEY` in `.env` if you connect directly to solar-control; the dev server proxies `/api/control` and the client uses the key from Vite env or from the proxy.
 
-### Performance Optimizations
+### Performance and Auth
 
-The middleware server includes several performance optimizations:
+The middleware server includes:
 - **HTTP Keep-Alive** - Reuses TCP connections to reduce latency (5-20ms vs 50-100ms)
 - **Connection Pooling** - Maintains up to 50 concurrent connections with 10 idle connections ready
-- **WebSocket Upgrade Handling** - Explicit upgrade event handling ensures no dropped connections
+- **WebSocket upgrade auth** - The proxy’s `headers` option does not apply to WebSocket upgrades. The server explicitly sets `X-API-Key` and `Authorization` on the upgrade request before proxying, so solar-control can authenticate the Socket.IO connection.
+- **Runtime config injection** - In production, the server injects `window.__SOLAR_CONFIG__` into the HTML so the client gets the API key at runtime (works in Docker without build-time env).
 - **Compression** - Gzip compression for static assets
 - **ETag Disabled** - Reduces overhead for proxied requests
 
@@ -138,22 +142,23 @@ src/
 │   └── EditInstanceModal.tsx   # Edit instance modal (backend-aware)
 ├── hooks/
 │   ├── useWebSocket.ts         # WebSocket management hook
+│   ├── useEventStream.ts       # Socket.IO /webui event stream (hosts, instances, gateway, pending)
 │   ├── useInstances.ts         # Instance data management hook
 │   ├── useHostStatus.ts        # Real-time host status updates
-│   └── useRoutingEvents.ts     # Routing event stream handler
+│   └── useRoutingEvents.ts    # Routing event stream handler
 └── lib/
     └── utils.ts                # Utility functions (Nord theme helpers)
 ```
 
 ## Usage
 
-1. **Configure** `SOLAR_CONTROL_URL` and `SOLAR_CONTROL_API_KEY` in your environment
-2. **Navigate** to the Routing page (default view) to monitor request flow
-3. **Add Hosts** through the "Hosts & Instances" page
-4. **Create Instances** - Select backend type (llama.cpp, HuggingFace Causal, or Classification)
-5. **Manage Instances** - Start, stop, edit, or delete model instances
-6. **View Logs** - Click the log icon on any instance for real-time output
-7. **Monitor Performance** - Watch the routing graph to see load distribution
+1. **Configure** `SOLAR_CONTROL_URL` and `SOLAR_CONTROL_API_KEY` in the server environment (or `VITE_*` for dev).
+2. **Navigate** to the Routing page (default view) to monitor request flow.
+3. **Hosts & Instances** - Approve **pending hosts** that registered with solar-control, or add hosts directly. Create and manage instances per host.
+4. **Create Instances** - Select backend type (llama.cpp, HuggingFace Causal, Classification, or Embedding).
+5. **Manage Instances** - Start, stop, edit, or delete model instances.
+6. **View Logs** - Click the log icon on any instance for real-time output.
+7. **Monitor Performance** - Watch the routing graph to see load distribution.
 
 ## Creating Instances
 
