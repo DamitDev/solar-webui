@@ -196,14 +196,21 @@ class SolarClient {
   }
 
   /**
-   * Get the management API key for direct Socket.IO connections.
+   * Get the management API key.
    *
-   * Only used when connecting directly to solar-control (dev mode with
-   * VITE_SOLAR_CONTROL_API_KEY set).  In production the Express proxy
-   * injects auth headers automatically — the React app never needs the key.
+   * Resolution order:
+   *  1. window.__SOLAR_CONFIG__ (injected by Express server at runtime)
+   *  2. VITE_SOLAR_CONTROL_API_KEY (baked by Vite at build time, dev mode)
    */
   getManagementApiKey(): string {
     if (this._managementApiKey) return this._managementApiKey;
+
+    const runtimeKey = (window as any).__SOLAR_CONFIG__?.SOLAR_CONTROL_API_KEY;
+    if (runtimeKey) {
+      this._managementApiKey = runtimeKey;
+      return runtimeKey;
+    }
+
     const envKey = import.meta.env.VITE_SOLAR_CONTROL_API_KEY;
     if (envKey) {
       this._managementApiKey = envKey;

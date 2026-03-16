@@ -470,10 +470,8 @@ export function useEventStream(handlers: EventHandlers = {}) {
       }
 
       const urlWithNamespace = baseUrl.replace(/\/$/, '') + '/webui';
-      console.log('EventStream: Connecting to', urlWithNamespace, 'path:', path, 'directAuth:', !!apiKey);
+      console.log('EventStream: Connecting to', urlWithNamespace, 'path:', path, 'hasAuth:', !!apiKey);
 
-      // Only pass auth when connecting directly (dev mode with VITE_SOLAR_CONTROL_API_KEY).
-      // In production the Express proxy injects auth headers on the upgrade request.
       const opts: any = {
         path,
         transports: ['websocket'],
