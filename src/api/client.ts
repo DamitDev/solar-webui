@@ -8,6 +8,12 @@ import {
   GatewayStats,
   GatewayRequestsResponse,
   GatewayEventDTO,
+  ApiEndpoint,
+  EndpointCreateRequest,
+  EndpointUpdateRequest,
+  EndpointUsageResponse,
+  PendingHost,
+  PendingHostApproveRequest,
 } from './types';
 
 const DEFAULT_RELATIVE_CONTROL_BASE = '/api/control';
@@ -31,6 +37,7 @@ const normalizeHttpBase = (value?: string | null): string => {
 class SolarClient {
   private client: AxiosInstance;
   private httpBase: string;
+  private _managementApiKey: string | null = null;
 
   constructor(baseURL?: string) {
     const overrideBase =
@@ -73,106 +80,148 @@ class SolarClient {
 
   // Host Management
   async getHosts(): Promise<Host[]> {
-    const response = await this.client.get('/hosts');
+    const response = await this.client.get('/api/hosts');
     return response.data;
   }
 
   async getHost(hostId: string): Promise<Host> {
-    const response = await this.client.get(`/hosts/${hostId}`);
+    const response = await this.client.get(`/api/hosts/${hostId}`);
     return response.data;
   }
 
   async createHost(data: HostCreateRequest): Promise<{ host: Host; message: string }> {
-    const response = await this.client.post('/hosts', data);
+    const response = await this.client.post('/api/hosts', data);
     return response.data;
   }
 
   async deleteHost(hostId: string): Promise<{ host: Host; message: string }> {
-    const response = await this.client.delete(`/hosts/${hostId}`);
+    const response = await this.client.delete(`/api/hosts/${hostId}`);
     return response.data;
   }
 
   async refreshAllHosts(): Promise<{ message: string; results: Array<{ host_id: string; name: string; status: string; message: string }> }> {
-    const response = await this.client.post('/hosts/refresh-all');
+    const response = await this.client.post('/api/hosts/refresh-all');
+    return response.data;
+  }
+
+  // Pending host approval
+  async getPendingHosts(): Promise<PendingHost[]> {
+    const response = await this.client.get('/api/hosts/pending');
+    return response.data;
+  }
+
+  async approveHost(pendingId: string, data: PendingHostApproveRequest): Promise<{ host: Host; message: string }> {
+    const response = await this.client.post(`/api/hosts/pending/${pendingId}/approve`, data);
+    return response.data;
+  }
+
+  async rejectHost(pendingId: string): Promise<{ message: string }> {
+    const response = await this.client.post(`/api/hosts/pending/${pendingId}/reject`);
     return response.data;
   }
 
   async getHostInstances(hostId: string): Promise<Instance[]> {
-    const response = await this.client.get(`/hosts/${hostId}/instances`);
+    const response = await this.client.get(`/api/hosts/${hostId}/instances`);
     return response.data;
   }
 
   // Instance Control (via solar-control proxy)
   async startInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances/${instanceId}/start`);
+    const response = await this.client.post(`/api/hosts/${hostId}/instances/${instanceId}/start`);
     return response.data;
   }
 
   async stopInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances/${instanceId}/stop`);
+    const response = await this.client.post(`/api/hosts/${hostId}/instances/${instanceId}/stop`);
     return response.data;
   }
 
   async restartInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances/${instanceId}/restart`);
+    const response = await this.client.post(`/api/hosts/${hostId}/instances/${instanceId}/restart`);
     return response.data;
   }
 
   async createInstance(hostId: string, config: any): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.post(`/hosts/${hostId}/instances`, { config });
+    const response = await this.client.post(`/api/hosts/${hostId}/instances`, { config });
     return response.data;
   }
 
   async updateInstance(hostId: string, instanceId: string, config: any): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.put(`/hosts/${hostId}/instances/${instanceId}`, { config });
+    const response = await this.client.put(`/api/hosts/${hostId}/instances/${instanceId}`, { config });
     return response.data;
   }
 
   async deleteInstance(hostId: string, instanceId: string): Promise<{ instance: Instance; message: string }> {
-    const response = await this.client.delete(`/hosts/${hostId}/instances/${instanceId}`);
+    const response = await this.client.delete(`/api/hosts/${hostId}/instances/${instanceId}`);
     return response.data;
   }
 
   // Instance runtime state (via solar-control proxy)
   async getInstanceState(hostId: string, instanceId: string): Promise<InstanceRuntimeState> {
-    const response = await this.client.get(`/hosts/${hostId}/instances/${instanceId}/state`);
+    const response = await this.client.get(`/api/hosts/${hostId}/instances/${instanceId}/state`);
     return response.data;
   }
 
   // Instance logs (via solar-control proxy)
   async getInstanceLogs(hostId: string, instanceId: string): Promise<Array<{ seq: number; timestamp: string; line: string }>> {
-    const response = await this.client.get(`/hosts/${hostId}/instances/${instanceId}/logs`);
+    const response = await this.client.get(`/api/hosts/${hostId}/instances/${instanceId}/logs`);
     return response.data;
   }
 
   /**
-   * Get the unified event stream WebSocket URL.
-   * WebSocket 2.0: Single connection for all events.
+   * Get the base URL for Socket.IO connection.
+   * For relative paths (e.g. /api/control), returns window.location.origin.
+   * For absolute URLs, returns the control base URL.
    */
-  getEventStreamWebSocketUrl(): string {
-    return this.buildWebSocketUrl('/ws/events');
+  getControlSocketIOUrl(): string {
+    if (isAbsoluteUrl(this.httpBase)) {
+      return this.httpBase;
+    }
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+    return '';
   }
 
   /**
-   * Get a WebSocket URL for a specific path on solar-control.
+   * Get the Socket.IO path for the connection.
+   * For relative paths: /api/control/socket.io (proxy rewrites to /socket.io)
+   * For absolute URLs: /socket.io (control server root)
    */
-  getControlWebSocketUrl(path: string): string {
-    return this.buildWebSocketUrl(path);
+  getSocketIOPath(): string {
+    if (isAbsoluteUrl(this.httpBase)) {
+      return '/socket.io';
+    }
+    return '/api/control/socket.io';
   }
 
   /**
-   * @deprecated Use getEventStreamWebSocketUrl() instead.
-   * Instance state is now streamed through the unified event stream.
+   * Get the management API key.
+   *
+   * Resolution order:
+   *  1. window.__SOLAR_CONFIG__ (injected by Express server at runtime)
+   *  2. VITE_SOLAR_CONTROL_API_KEY (baked by Vite at build time, dev mode)
    */
-  getInstanceStateWebSocketUrl(hostId: string, instanceId: string): string {
-    // Legacy: return old proxy URL for backward compatibility
-    // New code should use EventStreamContext instead
-    return this.buildWebSocketUrl(`/ws/instances/${hostId}/${instanceId}/state`);
+  getManagementApiKey(): string {
+    if (this._managementApiKey) return this._managementApiKey;
+
+    const runtimeKey = (window as any).__SOLAR_CONFIG__?.SOLAR_CONTROL_API_KEY;
+    if (runtimeKey) {
+      this._managementApiKey = runtimeKey;
+      return runtimeKey;
+    }
+
+    const envKey = import.meta.env.VITE_SOLAR_CONTROL_API_KEY;
+    if (envKey) {
+      this._managementApiKey = envKey;
+      return envKey;
+    }
+    return '';
   }
 
   // Gateway monitoring
-  async getGatewayStats(params: { from?: string; to?: string; request_type?: string }): Promise<GatewayStats> {
-    const response = await this.client.get('/gateway/stats', { params });
+  async getGatewayStats(params: { from?: string; to?: string; request_type?: string; endpoint_id?: string }): Promise<GatewayStats> {
+    const response = await this.client.get('/api/gateway/stats', { params });
     return response.data as GatewayStats;
   }
 
@@ -183,10 +232,11 @@ class SolarClient {
     request_type?: string;
     model?: string;
     host_id?: string;
+    endpoint_id?: string;
     page?: number;
     limit?: number;
   }): Promise<GatewayRequestsResponse> {
-    const response = await this.client.get('/gateway/requests', { params });
+    const response = await this.client.get('/api/gateway/requests', { params });
     return response.data as GatewayRequestsResponse;
   }
 
@@ -195,8 +245,9 @@ class SolarClient {
     to?: string;
     types?: string; // comma separated
     limit?: number;
+    endpoint_id?: string;
   }): Promise<{ from: string; to: string; types: string[]; items: GatewayEventDTO[] }> {
-    const response = await this.client.get('/gateway/events/recent', { params });
+    const response = await this.client.get('/api/gateway/events/recent', { params });
     return response.data as { from: string; to: string; types: string[]; items: GatewayEventDTO[] };
   }
 
@@ -221,38 +272,37 @@ class SolarClient {
     return response.data;
   }
 
-  /**
-   * @deprecated Logs are now streamed through the unified event stream.
-   * Use EventStreamContext.getInstanceLogs() instead.
-   */
-  getLogWebSocketUrl(hostId: string, instanceId: string): string {
-    // Legacy: return old proxy URL for backward compatibility
-    // New code should use EventStreamContext instead
-    return this.buildWebSocketUrl(`/ws/logs/${hostId}/${instanceId}`);
+  // API Endpoint management
+  async getEndpoints(): Promise<ApiEndpoint[]> {
+    const response = await this.client.get('/api/endpoints');
+    return response.data;
   }
 
-  private buildWebSocketUrl(path: string): string {
-    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
-
-    const resolveBase = () => {
-      if (isAbsoluteUrl(this.httpBase)) {
-        return new URL(this.httpBase);
-      }
-      if (typeof window !== 'undefined') {
-        return new URL(this.httpBase, window.location.origin);
-      }
-      return null;
-    };
-
-    const baseUrl = resolveBase();
-    if (!baseUrl) {
-      return normalizedPath;
-    }
-
-    const scheme = baseUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-    const basePath = baseUrl.pathname.replace(/\/$/, '');
-    return `${scheme}//${baseUrl.host}${basePath}${normalizedPath}`;
+  async createEndpoint(data: EndpointCreateRequest): Promise<ApiEndpoint> {
+    const response = await this.client.post('/api/endpoints', data);
+    return response.data;
   }
+
+  async getEndpoint(id: string): Promise<ApiEndpoint> {
+    const response = await this.client.get(`/api/endpoints/${id}`);
+    return response.data;
+  }
+
+  async updateEndpoint(id: string, data: EndpointUpdateRequest): Promise<ApiEndpoint> {
+    const response = await this.client.put(`/api/endpoints/${id}`, data);
+    return response.data;
+  }
+
+  async deleteEndpoint(id: string): Promise<{ message: string; id: string }> {
+    const response = await this.client.delete(`/api/endpoints/${id}`);
+    return response.data;
+  }
+
+  async getEndpointUsage(id: string, hours: number = 24): Promise<EndpointUsageResponse> {
+    const response = await this.client.get(`/api/endpoints/${id}/usage`, { params: { hours } });
+    return response.data;
+  }
+
 }
 
 // Export a default instance

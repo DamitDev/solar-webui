@@ -10,6 +10,7 @@ import {
   useEventStream,
   HostStatusData,
   InstanceStateData,
+  InstanceSummary,
   RequestState,
   WSMessageType,
   RoutingEventData,
@@ -18,11 +19,13 @@ import {
   GatewayRequestSummary,
   GatewayFilter,
 } from '@/hooks/useEventStream';
-import { LogMessage } from '@/api/types';
+import { LogMessage, PendingHost } from '@/api/types';
 
 interface EventStreamContextValue {
   isConnected: boolean;
   hosts: Map<string, HostStatusData>;
+  pendingHosts: Map<string, PendingHost>;
+  hostInstances: Map<string, InstanceSummary[]>;
   requests: Map<string, RequestState>;
   instanceStates: Map<string, InstanceStateData>;
   logs: Map<string, LogMessage[]>;
@@ -65,6 +68,7 @@ export function useEventStreamContext(): EventStreamContextValue {
 export type {
   HostStatusData,
   InstanceStateData,
+  InstanceSummary,
   RequestState,
   WSMessageType,
   RoutingEventData,

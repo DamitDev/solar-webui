@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react';
 import { useInstances } from '@/hooks/useInstances';
+import { useRoutingEventsContext } from '@/context/RoutingEventsContext';
 import { HostCard } from './HostCard';
 import { UnifiedTable } from './UnifiedTable';
 import { AddHostModal } from './AddHostModal';
+import { PendingHostBanner } from './PendingHostBanner';
 import { Plus, RefreshCw, AlertCircle, Server, LayoutGrid, Table2 } from 'lucide-react';
 import solarClient from '@/api/client';
 import { cn } from '@/lib/utils';
@@ -44,7 +46,9 @@ export function Dashboard() {
     restartInstance,
     reorderHost,
     reorderInstance,
+    isHostReachable,
   } = useInstances();
+  const { pendingHosts } = useRoutingEventsContext();
   
   const [showAddHost, setShowAddHost] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -200,6 +204,10 @@ export function Dashboard() {
           </div>
         )}
 
+        {pendingHosts.size > 0 && (
+          <PendingHostBanner pendingHosts={pendingHosts} onApproved={refresh} />
+        )}
+
         {hosts.length === 0 ? (
           <div className="text-center py-16">
             <Server size={64} className="mx-auto text-nord-3 mb-4" />
@@ -221,6 +229,7 @@ export function Dashboard() {
           /* Unified table view */
           <UnifiedTable
             hosts={hosts}
+            isHostReachable={isHostReachable}
             onStartInstance={startInstance}
             onStopInstance={stopInstance}
             onRestartInstance={restartInstance}
@@ -243,6 +252,7 @@ export function Dashboard() {
                   <HostCard
                     key={host.id}
                     host={host}
+                    hostReachable={isHostReachable(host.id)}
                     onReorderInstance={(hostId, activeId, overId) => reorderInstance(hostId, activeId, overId)}
                     onStartInstance={startInstance}
                     onStopInstance={stopInstance}

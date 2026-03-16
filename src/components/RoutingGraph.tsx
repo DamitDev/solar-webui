@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -10,14 +10,15 @@ import ReactFlow, {
   Position,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { X, Tags, Server, Binary, Search, MessageSquare } from 'lucide-react';
-import { RequestState } from '@/hooks/useRoutingEvents';
-import { useRoutingEventsContext } from '@/context/RoutingEventsContext';
+import { X, Tags, Server, Binary, Search, MessageSquare, Zap } from 'lucide-react';
+import { useRoutingEventsContext, RequestState } from '@/context/RoutingEventsContext';
 import { useEventStreamContext } from '@/context/EventStreamContext';
 import { useInstances } from '@/hooks/useInstances';
-import { Instance, getBackendType, getModelCategory, getFullModelLabel, getFullModelHexColor } from '@/api/types';
+import { Instance, ApiEndpoint, getBackendType, getModelCategory, getFullModelLabel, getFullModelHexColor } from '@/api/types';
+import solarClient from '@/api/client';
 
 const SOLAR_CONTROL_NODE_ID = 'solar-control';
+const ENDPOINT_PALETTE = ['#5E81AC', '#A3BE8C', '#EBCB8B', '#B48EAD', '#D08770', '#8FBCBB'];
 const GROUP_GENERATION_ID = 'group-generation';
 const GROUP_CLASSIFICATION_ID = 'group-classification';
 const GROUP_EMBEDDING_ID = 'group-embedding';
@@ -51,6 +52,15 @@ function getBrighterColor(color: string): string {
   return `#${brighterR.toString(16).padStart(2, '0')}${brighterG.toString(16).padStart(2, '0')}${brighterB.toString(16).padStart(2, '0')}`;
 }
 
+function getEndpointNodeId(endpointId: string): string {
+  return `endpoint-${endpointId}`;
+}
+
+function getEndpointColor(endpoints: ApiEndpoint[], endpointId: string): string {
+  const idx = endpoints.findIndex((ep) => ep.id === endpointId);
+  return idx >= 0 ? ENDPOINT_PALETTE[idx % ENDPOINT_PALETTE.length] : '#4C566A';
+}
+
 function getInstanceCategory(instance: Instance): 'generation' | 'classification' | 'embedding' | 'reranker' {
   return getModelCategory(instance.config);
 }
@@ -71,11 +81,27 @@ interface InstanceData {
 export function RoutingGraph() {
   const { requests, removeRequest } = useRoutingEventsContext();
   const { getInstanceState } = useEventStreamContext();
-  const { hosts, loading } = useInstances(10000);
+  const { hosts, loading } = useInstances();
+  const [endpoints, setEndpoints] = useState<ApiEndpoint[]>([]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const previousEdgeIdsRef = useRef<Set<string>>(new Set());
+
+  // Fetch endpoints on mount and periodically
+  useEffect(() => {
+    const fetchEndpoints = async () => {
+      try {
+        const data = await solarClient.getEndpoints();
+        setEndpoints(data);
+      } catch (err) {
+        console.error('Failed to fetch endpoints:', err);
+      }
+    };
+    fetchEndpoints();
+    const timer = setInterval(fetchEndpoints, 10000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     const newNodes: Node[] = [];
@@ -186,11 +212,12 @@ export function RoutingGraph() {
 
     const solarControlBg = '#5E81AC';
 
-    // Layout positions (increased spacing for cleaner look)
-    const controlX = 380;
-    const groupX = 700;
-    const hostX = 980;
-    const instanceX = 1280;
+    // Layout positions: Request(50) -> Endpoint(200) -> Solar Control(520) -> Group(840) -> Host(1120) -> Instance(1420)
+    const endpointX = 200;
+    const controlX = 520;
+    const groupX = 840;
+    const hostX = 1120;
+    const instanceX = 1420;
     
     const instanceHeight = 85;
     const hostGap = 20;
@@ -228,7 +255,45 @@ export function RoutingGraph() {
     const startY = 100;
     const controlY = startY + totalHeight / 2 - 50;
 
-    // 1. Solar Control node
+    // 1. Endpoint nodes (leftmost infrastructure column)
+    const endpointNodeHeight = 50;
+    const endpointGap = 12;
+    const endpointsTotalHeight = endpoints.length > 0
+      ? endpoints.length * endpointNodeHeight + (endpoints.length - 1) * endpointGap
+      : 0;
+    const endpointsStartY = controlY - endpointsTotalHeight / 2 + endpointNodeHeight / 2;
+
+    endpoints.forEach((ep, idx) => {
+      const endpointNodeId = getEndpointNodeId(ep.id);
+      const epColor = ENDPOINT_PALETTE[idx % ENDPOINT_PALETTE.length];
+      const epY = endpointsStartY + idx * (endpointNodeHeight + endpointGap);
+
+      newNodes.push({
+        id: endpointNodeId,
+        type: 'default',
+        position: { x: endpointX, y: epY },
+        sourcePosition: Position.Right,
+        targetPosition: Position.Left,
+        data: {
+          label: (
+            <div className="flex items-center gap-2 px-2 py-1">
+              <Zap size={12} style={{ opacity: 0.9 }} />
+              <span className="font-semibold text-sm">{ep.name}</span>
+            </div>
+          ),
+        },
+        style: {
+          background: epColor,
+          color: '#ECEFF4',
+          border: `1px solid ${getBrighterColor(epColor)}`,
+          borderRadius: '6px',
+          width: 120,
+          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        },
+      });
+    });
+
+    // 2. Solar Control node
     newNodes.push({
       id: SOLAR_CONTROL_NODE_ID,
       type: 'default',
@@ -256,6 +321,19 @@ export function RoutingGraph() {
         boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
       },
     });
+
+    // Static edges: Endpoint -> Solar Control (structure when we have endpoints)
+    if (endpoints.length > 0) {
+      endpoints.forEach((ep) => {
+        newEdges.push({
+          id: `static-${getEndpointNodeId(ep.id)}-to-control`,
+          source: getEndpointNodeId(ep.id),
+          target: SOLAR_CONTROL_NODE_ID,
+          animated: false,
+          style: { stroke: '#4C566A', strokeWidth: 1 },
+        });
+      });
+    }
 
     // Helper to create instance node
     const createInstanceNode = (
@@ -814,20 +892,56 @@ export function RoutingGraph() {
         className: request.removing ? 'request-node-animated removing' : 'request-node-animated',
       });
 
-      // Edge: Request → Solar Control
-      const edge1Id = `${requestNodeId}-to-control`;
-      const isEdge1New = !previousEdgeIdsRef.current.has(edge1Id);
-      currentEdgeIds.add(edge1Id);
-      
-      newEdges.push({
-        id: edge1Id,
-        source: requestNodeId,
-        target: SOLAR_CONTROL_NODE_ID,
-        animated: request.status === 'pending' || request.status === 'processing' || request.status === 'routed',
-        style: { stroke: getStatusColor(request.status), strokeWidth: 3 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: getStatusColor(request.status) },
-        className: request.removing ? 'request-edge removing-edge' : (isEdge1New ? 'request-edge request-edge-new' : 'request-edge'),
-      });
+      const requestColor = getStatusColor(request.status);
+      const hasKnownEndpoint = request.endpoint_id && endpoints.some((ep) => ep.id === request.endpoint_id);
+      const endpointColor = hasKnownEndpoint
+        ? getEndpointColor(endpoints, request.endpoint_id!)
+        : requestColor;
+      const edgeStrokeColor = hasKnownEndpoint ? endpointColor : requestColor;
+
+      if (hasKnownEndpoint && request.endpoint_id) {
+        const endpointNodeId = getEndpointNodeId(request.endpoint_id);
+        // Edge: Request → Endpoint
+        const edgeReqToEpId = `${requestNodeId}-to-${endpointNodeId}`;
+        const isReqToEpNew = !previousEdgeIdsRef.current.has(edgeReqToEpId);
+        currentEdgeIds.add(edgeReqToEpId);
+        newEdges.push({
+          id: edgeReqToEpId,
+          source: requestNodeId,
+          target: endpointNodeId,
+          animated: request.status === 'pending' || request.status === 'processing' || request.status === 'routed',
+          style: { stroke: edgeStrokeColor, strokeWidth: 3 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: edgeStrokeColor },
+          className: request.removing ? 'request-edge removing-edge' : (isReqToEpNew ? 'request-edge request-edge-new' : 'request-edge'),
+        });
+        // Edge: Endpoint → Solar Control
+        const edgeEpToCtrlId = `${endpointNodeId}-to-control-${request.request_id}`;
+        const isEpToCtrlNew = !previousEdgeIdsRef.current.has(edgeEpToCtrlId);
+        currentEdgeIds.add(edgeEpToCtrlId);
+        newEdges.push({
+          id: edgeEpToCtrlId,
+          source: endpointNodeId,
+          target: SOLAR_CONTROL_NODE_ID,
+          animated: request.status === 'pending' || request.status === 'processing' || request.status === 'routed',
+          style: { stroke: edgeStrokeColor, strokeWidth: 3 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: edgeStrokeColor },
+          className: request.removing ? 'request-edge removing-edge' : (isEpToCtrlNew ? 'request-edge request-edge-new' : 'request-edge'),
+        });
+      } else {
+        // Edge: Request → Solar Control (direct when no endpoint_id)
+        const edge1Id = `${requestNodeId}-to-control`;
+        const isEdge1New = !previousEdgeIdsRef.current.has(edge1Id);
+        currentEdgeIds.add(edge1Id);
+        newEdges.push({
+          id: edge1Id,
+          source: requestNodeId,
+          target: SOLAR_CONTROL_NODE_ID,
+          animated: request.status === 'pending' || request.status === 'processing' || request.status === 'routed',
+          style: { stroke: requestColor, strokeWidth: 3 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: requestColor },
+          className: request.removing ? 'request-edge removing-edge' : (isEdge1New ? 'request-edge request-edge-new' : 'request-edge'),
+        });
+      }
 
       // Routing path when request is routed
       if (request.instance_id && request.host_id) {
@@ -887,7 +1001,7 @@ export function RoutingGraph() {
     setNodes(newNodes);
     setEdges(newEdges);
     previousEdgeIdsRef.current = currentEdgeIds;
-  }, [requests, hosts, removeRequest, setNodes, setEdges, getInstanceState]);
+  }, [requests, hosts, endpoints, removeRequest, setNodes, setEdges, getInstanceState]);
 
   if (loading) {
     return (
@@ -937,6 +1051,7 @@ export function RoutingGraph() {
           <MiniMap
             nodeColor={(node) => {
               if (node.id === SOLAR_CONTROL_NODE_ID) return '#5E81AC';
+              if (node.id.startsWith('endpoint-')) return node.style?.background as string || '#4C566A';
               if (node.id === GROUP_GENERATION_ID) return '#A3BE8C';
               if (node.id === GROUP_CLASSIFICATION_ID) return '#EBCB8B';
               if (node.id === GROUP_EMBEDDING_ID) return '#B48EAD';

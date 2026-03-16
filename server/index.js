@@ -110,7 +110,23 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+// Runtime config injection — the standard pattern for SPA + Docker.
+// Vite bakes VITE_* env vars at build time, so they're empty in a Docker
+// image built without them.  Instead the Express server injects a small
+// <script> tag with runtime values into the served index.html.
+const buildRuntimeHtml = () => {
+  const indexPath = path.join(DIST_DIR, 'index.html');
+  if (!fs.existsSync(indexPath)) return null;
+  const raw = fs.readFileSync(indexPath, 'utf-8');
+  const cfg = {
+    SOLAR_CONTROL_API_KEY: CONTROL_API_KEY || '',
+  };
+  const tag = `<script>window.__SOLAR_CONFIG__=${JSON.stringify(cfg)};</script>`;
+  return raw.replace('</head>', `${tag}\n</head>`);
+};
+
 if (fs.existsSync(DIST_DIR)) {
+  const runtimeHtml = buildRuntimeHtml();
   app.use(compression());
   app.use(
     express.static(DIST_DIR, {
@@ -119,12 +135,15 @@ if (fs.existsSync(DIST_DIR)) {
     }),
   );
 
-  // Handle SPA routing - using regex to avoid path-to-regexp wildcard issues
   app.use((req, res, next) => {
     if (req.method !== 'GET') {
       return next();
     }
-    res.sendFile(path.join(DIST_DIR, 'index.html'));
+    if (runtimeHtml) {
+      res.type('html').send(runtimeHtml);
+    } else {
+      res.sendFile(path.join(DIST_DIR, 'index.html'));
+    }
   });
 } else {
   app.use((_req, res) => {
@@ -134,23 +153,36 @@ if (fs.existsSync(DIST_DIR)) {
 
 const server = http.createServer(app);
 
-// Explicitly handle upgrade events for WebSockets
 server.on('upgrade', (req, socket, head) => {
+  if (!req.url?.startsWith('/api/control')) {
+    socket.destroy();
+    return;
+  }
+
+  // http-proxy-middleware's `headers` config only applies to regular HTTP
+  // requests, NOT WebSocket upgrades.  Inject auth headers manually so
+  // solar-control can authenticate the proxied upgrade.
+  if (CONTROL_API_KEY) {
+    req.headers['x-api-key'] = CONTROL_API_KEY;
+    req.headers['authorization'] = `Bearer ${CONTROL_API_KEY}`;
+  }
+
   if (DEBUG_PROXY) {
     console.log('[proxy] upgrade request', {
       url: req.url,
       headers: {
         host: req.headers.host,
         origin: req.headers.origin,
+        hasApiKey: !!req.headers['x-api-key'],
       },
     });
   }
   
-  // Check if the proxy middleware has an upgrade function
   if (typeof controlProxy.upgrade === 'function') {
     controlProxy.upgrade(req, socket, head);
   } else {
     console.warn('[proxy] controlProxy.upgrade is not a function');
+    socket.destroy();
   }
 });
 
