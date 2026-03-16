@@ -457,7 +457,6 @@ export function useEventStream(handlers: EventHandlers = {}) {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
     let socket: Socket | null = null;
 
     const connect = () => {
@@ -550,7 +549,6 @@ export function useEventStream(handlers: EventHandlers = {}) {
     connect();
 
     return () => {
-      cancelled = true;
       if (socket) {
         socket.disconnect();
         socket.removeAllListeners();
