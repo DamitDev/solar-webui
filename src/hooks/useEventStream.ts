@@ -460,33 +460,31 @@ export function useEventStream(handlers: EventHandlers = {}) {
     let cancelled = false;
     let socket: Socket | null = null;
 
-    const connect = async () => {
+    const connect = () => {
       const baseUrl = solarClient.getControlSocketIOUrl();
       const path = solarClient.getSocketIOPath();
-      const apiKey = await solarClient.fetchManagementApiKey();
-
-      if (cancelled) return;
+      const apiKey = solarClient.getManagementApiKey();
 
       if (!baseUrl) {
         console.warn('EventStream: No base URL for Socket.IO');
         return;
       }
 
-      // Connect to /webui namespace (namespace is in the URL path)
       const urlWithNamespace = baseUrl.replace(/\/$/, '') + '/webui';
-      console.log('EventStream: Connecting to', urlWithNamespace, 'path:', path, 'hasKey:', !!apiKey);
+      console.log('EventStream: Connecting to', urlWithNamespace, 'path:', path, 'directAuth:', !!apiKey);
 
-      socket = io(urlWithNamespace, {
+      // Only pass auth when connecting directly (dev mode with VITE_SOLAR_CONTROL_API_KEY).
+      // In production the Express proxy injects auth headers on the upgrade request.
+      const opts: any = {
         path,
         transports: ['websocket'],
-        auth: { api_key: apiKey },
         autoConnect: true,
-      });
-
-      if (cancelled) {
-        socket.disconnect();
-        return;
+      };
+      if (apiKey) {
+        opts.auth = { api_key: apiKey };
       }
+
+      socket = io(urlWithNamespace, opts);
 
       socketRef.current = socket;
       const webuiSocket = socket;
