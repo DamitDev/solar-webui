@@ -87,7 +87,7 @@ function mergeInstanceData(
           port: si.port || 0,
           model: '',
         } as any,
-        status: si.status || 'unknown',
+        status: (si.status as InstanceStatus) || 'stopped',
         port: si.port || 0,
         created_at: new Date().toISOString(),
         retry_count: 0,

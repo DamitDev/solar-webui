@@ -142,29 +142,35 @@ export function GatewayDashboard() {
         endpoint_id: endpointFilter !== 'all' ? endpointFilter : undefined,
       });
       setStats(s);
+    } catch (err) {
+      console.error('Failed to fetch gateway stats:', err);
     } finally {
       setLoadingStats(false);
     }
   }, [fromIso, toIso, requestTypeFilter, endpointFilter]);
 
   const fetchEndpointStats = useCallback(async () => {
-    const baseParams = {
-      from: fromIso,
-      to: toIso,
-      request_type: requestTypeFilter !== 'all' ? requestTypeFilter : undefined,
-    };
-    const results: Record<string, GatewayStats> = {};
-    // Always fetch aggregate for "All" card
-    const allStats = await solarClient.getGatewayStats(baseParams);
-    results['all'] = allStats;
-    // Fetch per-endpoint stats
-    await Promise.all(
-      endpoints.map(async (ep) => {
-        const s = await solarClient.getGatewayStats({ ...baseParams, endpoint_id: ep.id });
-        results[ep.id] = s;
-      })
-    );
-    setEndpointStats(results);
+    try {
+      const baseParams = {
+        from: fromIso,
+        to: toIso,
+        request_type: requestTypeFilter !== 'all' ? requestTypeFilter : undefined,
+      };
+      const results: Record<string, GatewayStats> = {};
+      const allStats = await solarClient.getGatewayStats(baseParams);
+      results['all'] = allStats;
+      await Promise.all(
+        endpoints.map(async (ep) => {
+          try {
+            const s = await solarClient.getGatewayStats({ ...baseParams, endpoint_id: ep.id });
+            results[ep.id] = s;
+          } catch { /* individual endpoint stat failure is non-fatal */ }
+        })
+      );
+      setEndpointStats(results);
+    } catch (err) {
+      console.error('Failed to fetch endpoint stats:', err);
+    }
   }, [fromIso, toIso, requestTypeFilter, endpoints]);
 
   const fetchRequests = useCallback(async () => {
@@ -183,6 +189,8 @@ export function GatewayDashboard() {
       });
       setHistoricalRequests(res.items);
       setTotalRequests(res.total);
+    } catch (err) {
+      console.error('Failed to fetch gateway requests:', err);
     } finally {
       setLoadingReqs(false);
     }

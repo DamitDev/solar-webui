@@ -439,21 +439,16 @@ export function useEventStream(handlers: EventHandlers = {}) {
     }
   }, [updateRequest, removeRequest]);
 
-  // Send filter update to server
   const setFilter = useCallback((filter: Partial<GatewayFilter>) => {
     setGatewayFilter((prevFilter) => {
-      const newFilter: GatewayFilter = {
-        ...prevFilter,
-        ...filter,
-      };
-
-      const socket = socketRef.current;
-      if (socket?.connected) {
-        socket.emit('set_filter', newFilter);
-      }
-
-      return newFilter;
+      return { ...prevFilter, ...filter };
     });
+
+    const merged = { ...gatewayFilterRef.current, ...filter };
+    const socket = socketRef.current;
+    if (socket?.connected) {
+      socket.emit('set_filter', merged);
+    }
   }, []);
 
   // Clear gateway requests (when filter changes)
@@ -526,7 +521,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
     bindEvent('host_health', (payload) => ({
       type: 'host_health',
       host_id: payload?.host_id,
-      data: payload?.data,
+      data: payload?.data ?? payload,
     }));
     bindEvent('instance_state', (payload) => ({
       type: 'instance_state',

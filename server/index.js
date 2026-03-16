@@ -140,8 +140,12 @@ if (fs.existsSync(DIST_DIR)) {
 
 const server = http.createServer(app);
 
-// Explicitly handle upgrade events for WebSockets
 server.on('upgrade', (req, socket, head) => {
+  if (!req.url?.startsWith('/api/control')) {
+    socket.destroy();
+    return;
+  }
+
   if (DEBUG_PROXY) {
     console.log('[proxy] upgrade request', {
       url: req.url,
@@ -152,11 +156,11 @@ server.on('upgrade', (req, socket, head) => {
     });
   }
   
-  // Check if the proxy middleware has an upgrade function
   if (typeof controlProxy.upgrade === 'function') {
     controlProxy.upgrade(req, socket, head);
   } else {
     console.warn('[proxy] controlProxy.upgrade is not a function');
+    socket.destroy();
   }
 });
 

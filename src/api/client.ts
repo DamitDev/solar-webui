@@ -232,6 +232,7 @@ class SolarClient {
           return key;
         } catch (e) {
           console.warn('Failed to fetch /api/config:', e);
+          this._configPromise = null; // Allow retry on next call
           return '';
         }
       })();
