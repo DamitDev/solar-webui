@@ -3,7 +3,7 @@ import { Instance, InstanceConfig, MemoryInfo, getModelCategory, ModelCategory }
 import { cn, getStatusColor, formatDate, getMemoryColor, formatMemoryUsage } from '@/lib/utils';
 import { InstanceCard } from './InstanceCard';
 import { AddInstanceModal } from './AddInstanceModal';
-import { Server, Trash2, Plus, MessageSquare, Brain, Tags, Binary, Search, GripVertical } from 'lucide-react';
+import { Server, Trash2, Plus, MessageSquare, Brain, Tags, Binary, Search, GripVertical, Cpu, Microchip } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -30,6 +30,7 @@ interface HostCardProps {
     status: string;
     last_seen?: string;
     memory?: MemoryInfo;
+    gpu_type?: string;
     instances: Instance[];
   };
   hostReachable: boolean;
@@ -55,6 +56,32 @@ const CategoryIcon = ({ category, size = 14 }: { category: ModelCategory; size?:
       return <Search size={size} />;
     default:
       return <Brain size={size} />;
+  }
+};
+
+const getGpuTypeLabel = (gpuType: string): string => {
+  switch (gpuType) {
+    case 'nvidia_cuda':
+      return 'NVIDIA CUDA';
+    case 'apple_mps':
+      return 'Apple MPS';
+    case 'cpu':
+      return 'CPU';
+    default:
+      return gpuType;
+  }
+};
+
+const getGpuTypeBadgeClass = (gpuType: string): string => {
+  switch (gpuType) {
+    case 'nvidia_cuda':
+      return 'bg-nord-14 bg-opacity-30 text-nord-14';
+    case 'apple_mps':
+      return 'bg-nord-15 bg-opacity-30 text-nord-15';
+    case 'cpu':
+      return 'bg-nord-3 text-nord-4';
+    default:
+      return 'bg-nord-3 text-nord-4';
   }
 };
 
@@ -220,6 +247,18 @@ export function HostCard({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {host.gpu_type && (
+              <span
+                className={cn(
+                  'px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1',
+                  getGpuTypeBadgeClass(host.gpu_type)
+                )}
+                title={`Acceleration: ${getGpuTypeLabel(host.gpu_type)}`}
+              >
+                {host.gpu_type === 'cpu' ? <Cpu size={12} /> : <Microchip size={12} />}
+                {getGpuTypeLabel(host.gpu_type)}
+              </span>
+            )}
             <span
               className={cn(
                 'px-3 py-1 rounded-full text-xs font-medium',
