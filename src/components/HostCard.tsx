@@ -75,13 +75,13 @@ const getGpuTypeLabel = (gpuType: string): string => {
 const getGpuTypeBadgeClass = (gpuType: string): string => {
   switch (gpuType) {
     case 'nvidia_cuda':
-      return 'bg-nord-14 bg-opacity-30 text-nord-14';
+      return 'bg-nord-14 text-nord-6';
     case 'apple_mps':
-      return 'bg-nord-15 bg-opacity-30 text-nord-15';
+      return 'bg-nord-15 text-nord-6';
     case 'cpu':
-      return 'bg-nord-3 text-nord-4';
+      return 'bg-nord-3 text-nord-6';
     default:
-      return 'bg-nord-3 text-nord-4';
+      return 'bg-nord-3 text-nord-6';
   }
 };
 
