@@ -245,6 +245,7 @@ export interface Host {
   status: HostStatus;
   last_seen?: string;
   memory?: MemoryInfo;
+  gpu_type?: string;
   created_at: string;
 }
 

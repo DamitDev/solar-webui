@@ -51,6 +51,7 @@ export interface HostStatusData {
   status: 'online' | 'offline' | 'error';
   url?: string;
   memory?: MemoryInfo;
+  gpu_type?: string;
   connected?: boolean;
   last_seen?: string;
   timestamp?: string;
@@ -341,6 +342,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
               newMap.set(hostId, {
                 ...existing,
                 memory: event.data.memory,
+                ...(event.data.gpu_type && { gpu_type: event.data.gpu_type }),
               });
             }
             return newMap;

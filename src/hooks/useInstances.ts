@@ -273,6 +273,7 @@ export function useInstances() {
             ...host,
             status: wsStatus.status as any,
             memory: wsStatus.memory || host.memory,
+            gpu_type: wsStatus.gpu_type || host.gpu_type,
           }
         : host;
 
