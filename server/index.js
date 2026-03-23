@@ -16,14 +16,19 @@ const CONTROL_API_KEY = process.env.SOLAR_CONTROL_API_KEY || '';
 const LOG_LEVEL = process.env.NODE_ENV === 'production' ? 'warn' : 'info';
 const DEBUG_PROXY = process.env.SOLAR_WEBUI_DEBUG === 'true';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const packageJson = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../package.json'), 'utf-8'));
+const APP_VERSION = process.env.APP_VERSION || packageJson.version || '0.0.0-dev';
+
 console.log('[solar-webui] config', {
+  version: APP_VERSION,
   port: PORT,
   controlUrl: CONTROL_URL,
   hasControlApiKey: CONTROL_API_KEY.length > 0,
 });
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 const DIST_DIR = path.resolve(__dirname, '../dist');
 
 const app = express();
@@ -105,6 +110,7 @@ app.use('/api/control', controlProxy);
 app.get('/api/health', (_req, res) => {
   res.json({
     status: 'ok',
+    version: APP_VERSION,
     target: CONTROL_URL,
     hasControlApiKey: Boolean(CONTROL_API_KEY),
   });

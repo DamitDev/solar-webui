@@ -1,6 +1,8 @@
 # Stage 1: Build the React application
 FROM node:20-alpine AS builder
 
+ARG APP_VERSION=0.0.0-dev
+
 WORKDIR /app
 
 # Copy package files
@@ -12,17 +14,24 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Patch version before build
+RUN sed -i "s/\"version\": \".*\"/\"version\": \"${APP_VERSION}\"/" package.json
+
 # Build the application
 RUN npm run build
 
 # Stage 2: Run the middleware server
 FROM node:20-alpine
 
-WORKDIR /app
-ENV NODE_ENV=production
+ARG APP_VERSION=0.0.0-dev
 
-# Copy package files and install production dependencies
-COPY package*.json ./
+WORKDIR /app
+ENV NODE_ENV=production \
+    APP_VERSION=${APP_VERSION}
+
+# Copy patched package files from builder and install production dependencies
+COPY --from=builder /app/package.json ./
+COPY package-lock.json ./
 RUN npm ci --omit=dev
 
 # Use the existing node user (UID 1000 in alpine)
