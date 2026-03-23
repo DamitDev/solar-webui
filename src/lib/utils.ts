@@ -95,6 +95,11 @@ export function formatMemoryUsage(used: number, total: number, percent: number):
   return `${used.toFixed(1)} / ${total.toFixed(1)} GB (${percent.toFixed(1)}%)`;
 }
 
+export function formatDiskUsage(used: number, total: number): string {
+  const percent = total > 0 ? (used / total) * 100 : 0;
+  return `${used.toFixed(1)} / ${total.toFixed(1)} GB (${percent.toFixed(1)}%)`;
+}
+
 export function formatTokenCount(count: number | undefined | null): string {
   if (count === undefined || count === null || isNaN(count)) {
     return '—';

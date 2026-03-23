@@ -292,6 +292,11 @@ export function useInstances() {
             status: wsStatus.status as any,
             memory: wsStatus.memory || host.memory,
             gpu_type: wsStatus.gpu_type || host.gpu_type,
+            roles: wsStatus.roles || host.roles,
+            disk_total_gb: wsStatus.disk_total_gb ?? host.disk_total_gb,
+            disk_used_gb: wsStatus.disk_used_gb ?? host.disk_used_gb,
+            disk_available_gb: wsStatus.disk_available_gb ?? host.disk_available_gb,
+            memory_available_gb: wsStatus.memory_available_gb ?? host.memory_available_gb,
           }
         : host;
 

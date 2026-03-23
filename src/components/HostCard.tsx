@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from 'react';
 import { Instance, InstanceConfig, MemoryInfo, getModelCategory, ModelCategory } from '@/api/types';
-import { cn, getStatusColor, formatDate, getMemoryColor, formatMemoryUsage } from '@/lib/utils';
+import { cn, getStatusColor, formatDate, getMemoryColor, formatMemoryUsage, formatDiskUsage } from '@/lib/utils';
 import { InstanceCard } from './InstanceCard';
 import { AddInstanceModal } from './AddInstanceModal';
 import {
@@ -15,6 +15,8 @@ import {
   GripVertical,
   Cpu,
   Microchip,
+  HardDrive,
+  MemoryStick,
 } from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -39,6 +41,10 @@ interface HostCardProps {
     last_seen?: string;
     memory?: MemoryInfo;
     gpu_type?: string;
+    roles?: string[];
+    disk_total_gb?: number;
+    disk_used_gb?: number;
+    disk_available_gb?: number;
     instances: Instance[];
   };
   hostReachable: boolean;
@@ -90,6 +96,17 @@ const getGpuTypeBadgeClass = (gpuType: string): string => {
       return 'bg-nord-3 text-nord-6';
     default:
       return 'bg-nord-3 text-nord-6';
+  }
+};
+
+const getRoleBadgeClass = (role: string): string => {
+  switch (role) {
+    case 'inference':
+      return 'bg-nord-6 bg-opacity-20 text-nord-6';
+    case 'training':
+      return 'bg-nord-15 text-nord-6';
+    default:
+      return 'bg-nord-6 bg-opacity-15 text-nord-6';
   }
 };
 
@@ -252,6 +269,16 @@ export function HostCard({
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {host.roles &&
+                host.roles.length > 0 &&
+                host.roles.map((role) => (
+                  <span
+                    key={role}
+                    className={cn('px-2 py-1 rounded-full text-xs font-medium', getRoleBadgeClass(role))}
+                  >
+                    {role}
+                  </span>
+                ))}
               {host.gpu_type && (
                 <span
                   className={cn(
@@ -333,13 +360,38 @@ export function HostCard({
           {host.memory && (
             <div className="mt-3 space-y-1">
               <div className="flex items-center justify-between text-xs text-nord-4">
-                <span className="font-medium">{host.memory.memory_type} Usage:</span>
+                <span className="font-medium flex items-center gap-1">
+                  <MemoryStick size={12} />
+                  {host.memory.memory_type} Usage:
+                </span>
                 <span>{formatMemoryUsage(host.memory.used_gb, host.memory.total_gb, host.memory.percent)}</span>
               </div>
               <div className="w-full h-2 bg-nord-2 rounded-full overflow-hidden">
                 <div
                   className={cn('h-full transition-all duration-300 rounded-full', getMemoryColor(host.memory.percent))}
                   style={{ width: `${Math.min(host.memory.percent, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Disk Usage */}
+          {host.disk_total_gb != null && host.disk_used_gb != null && host.disk_total_gb > 0 && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between text-xs text-nord-4">
+                <span className="font-medium flex items-center gap-1">
+                  <HardDrive size={12} />
+                  Disk Usage:
+                </span>
+                <span>{formatDiskUsage(host.disk_used_gb, host.disk_total_gb)}</span>
+              </div>
+              <div className="w-full h-2 bg-nord-2 rounded-full overflow-hidden">
+                <div
+                  className={cn(
+                    'h-full transition-all duration-300 rounded-full',
+                    getMemoryColor((host.disk_used_gb / host.disk_total_gb) * 100),
+                  )}
+                  style={{ width: `${Math.min((host.disk_used_gb / host.disk_total_gb) * 100, 100)}%` }}
                 />
               </div>
             </div>

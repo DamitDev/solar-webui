@@ -52,6 +52,11 @@ export interface HostStatusData {
   url?: string;
   memory?: MemoryInfo;
   gpu_type?: string;
+  roles?: string[];
+  disk_total_gb?: number;
+  disk_used_gb?: number;
+  disk_available_gb?: number;
+  memory_available_gb?: number;
   connected?: boolean;
   last_seen?: string;
   timestamp?: string;
@@ -342,8 +347,15 @@ export function useEventStream(handlers: EventHandlers = {}) {
               if (existing) {
                 newMap.set(hostId, {
                   ...existing,
-                  memory: event.data.memory,
+                  memory: event.data.memory ?? existing.memory,
                   ...(event.data.gpu_type && { gpu_type: event.data.gpu_type }),
+                  ...(event.data.roles && { roles: event.data.roles }),
+                  ...(event.data.disk_total_gb != null && { disk_total_gb: event.data.disk_total_gb }),
+                  ...(event.data.disk_used_gb != null && { disk_used_gb: event.data.disk_used_gb }),
+                  ...(event.data.disk_available_gb != null && { disk_available_gb: event.data.disk_available_gb }),
+                  ...(event.data.memory_available_gb != null && {
+                    memory_available_gb: event.data.memory_available_gb,
+                  }),
                 });
               }
               return newMap;
@@ -518,11 +530,21 @@ export function useEventStream(handlers: EventHandlers = {}) {
       bindEvent('host_pending', (payload) => ({ type: 'host_pending', data: payload }));
       bindEvent('host_pending_removed', (payload) => ({ type: 'host_pending_removed', data: payload }));
       bindEvent('instances_update', (payload) => ({ type: 'instances_update', data: payload }));
-      bindEvent('host_health', (payload) => ({
-        type: 'host_health',
-        host_id: payload?.host_id,
-        data: payload?.data ?? payload,
-      }));
+      bindEvent('host_health', (payload) => {
+        const raw = payload?.data ?? payload;
+        return {
+          type: 'host_health',
+          host_id: payload?.host_id,
+          data: {
+            ...raw,
+            ...(payload?.memory && { memory: payload.memory }),
+            ...(payload?.disk_total_gb != null && { disk_total_gb: payload.disk_total_gb }),
+            ...(payload?.disk_used_gb != null && { disk_used_gb: payload.disk_used_gb }),
+            ...(payload?.disk_available_gb != null && { disk_available_gb: payload.disk_available_gb }),
+            ...(payload?.memory_available_gb != null && { memory_available_gb: payload.memory_available_gb }),
+          },
+        };
+      });
       bindEvent('instance_state', (payload) => ({
         type: 'instance_state',
         host_id: payload?.host_id,

@@ -9,6 +9,7 @@ export type BackendType = 'llamacpp' | 'huggingface_causal' | 'huggingface_class
 export interface MemoryInfo {
   used_gb: number;
   total_gb: number;
+  available_gb?: number;
   percent: number;
   memory_type: string;
 }
@@ -250,6 +251,11 @@ export interface Host {
   last_seen?: string;
   memory?: MemoryInfo;
   gpu_type?: string;
+  roles?: string[];
+  disk_total_gb?: number;
+  disk_used_gb?: number;
+  disk_available_gb?: number;
+  memory_available_gb?: number;
   created_at: string;
 }
 
