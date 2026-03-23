@@ -78,9 +78,7 @@ export function PendingHostBanner({ pendingHosts, onApproved }: PendingHostBanne
                 /* Approve form inline */
                 <div className="flex-1 space-y-3">
                   {approveForm.error && (
-                    <div className="text-sm text-nord-11 bg-nord-11 bg-opacity-10 p-2 rounded">
-                      {approveForm.error}
-                    </div>
+                    <div className="text-sm text-nord-11 bg-nord-11 bg-opacity-10 p-2 rounded">{approveForm.error}</div>
                   )}
                   <div className="grid grid-cols-2 gap-3">
                     <div>
@@ -107,7 +105,12 @@ export function PendingHostBanner({ pendingHosts, onApproved }: PendingHostBanne
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-nord-4 mr-auto">
                       Key: <code className="text-nord-13">{p.api_key_preview}</code>
-                      {p.instance_count != null && <> &middot; {p.instance_count} instance{p.instance_count !== 1 ? 's' : ''}</>}
+                      {p.instance_count != null && (
+                        <>
+                          {' '}
+                          &middot; {p.instance_count} instance{p.instance_count !== 1 ? 's' : ''}
+                        </>
+                      )}
                     </span>
                     <button
                       onClick={() => setApproveForm(null)}
@@ -132,16 +135,17 @@ export function PendingHostBanner({ pendingHosts, onApproved }: PendingHostBanne
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <Clock size={14} className="text-nord-13 flex-shrink-0" />
-                      <span className="font-medium text-nord-6 truncate">
-                        {p.host_name || 'Unknown host'}
-                      </span>
-                      <code className="text-xs text-nord-4 bg-nord-2 px-1.5 py-0.5 rounded">
-                        {p.api_key_preview}
-                      </code>
+                      <span className="font-medium text-nord-6 truncate">{p.host_name || 'Unknown host'}</span>
+                      <code className="text-xs text-nord-4 bg-nord-2 px-1.5 py-0.5 rounded">{p.api_key_preview}</code>
                     </div>
                     <div className="text-xs text-nord-4 mt-1">
                       Connected {new Date(p.connected_at).toLocaleTimeString()}
-                      {p.instance_count != null && <> &middot; {p.instance_count} instance{p.instance_count !== 1 ? 's' : ''}</>}
+                      {p.instance_count != null && (
+                        <>
+                          {' '}
+                          &middot; {p.instance_count} instance{p.instance_count !== 1 ? 's' : ''}
+                        </>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">

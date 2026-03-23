@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { X, Cpu, Brain, MessageSquare, Binary, Tags, Search } from 'lucide-react';
-import { 
-  InstanceConfig, 
-  BackendType, 
-  LlamaCppConfig, 
-  HuggingFaceCausalConfig, 
+import {
+  InstanceConfig,
+  BackendType,
+  LlamaCppConfig,
+  HuggingFaceCausalConfig,
   HuggingFaceClassificationConfig,
   HuggingFaceEmbeddingConfig,
-  getBackendLabel 
+  getBackendLabel,
 } from '@/api/types';
 
 interface AddInstanceModalProps {
@@ -52,10 +52,14 @@ const getBackendTypeFromSelection = (primary: PrimaryBackend, mode: string): Bac
     return 'llamacpp';
   }
   switch (mode) {
-    case 'causal': return 'huggingface_causal';
-    case 'classifier': return 'huggingface_classification';
-    case 'embedding': return 'huggingface_embedding';
-    default: return 'huggingface_causal';
+    case 'causal':
+      return 'huggingface_causal';
+    case 'classifier':
+      return 'huggingface_classification';
+    case 'embedding':
+      return 'huggingface_embedding';
+    default:
+      return 'huggingface_causal';
   }
 };
 
@@ -167,7 +171,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields based on backend type
     if (primaryBackend === 'llamacpp') {
       const config = formData as Partial<LlamaCppConfig>;
@@ -184,10 +188,12 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
     }
 
     // Parse labels for classification models
-    let finalConfig = { ...formData };
+    const finalConfig = { ...formData };
     if (backendType === 'huggingface_classification' && labelsInput.trim()) {
-      (finalConfig as Partial<HuggingFaceClassificationConfig>).labels = 
-        labelsInput.split(',').map(l => l.trim()).filter(l => l);
+      (finalConfig as Partial<HuggingFaceClassificationConfig>).labels = labelsInput
+        .split(',')
+        .map((l) => l.trim())
+        .filter((l) => l);
     }
 
     setLoading(true);
@@ -205,17 +211,11 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]:
-        type === 'number'
-          ? value === ''
-            ? undefined
-            : parseFloat(value)
-          : type === 'checkbox'
-            ? checked
-            : value,
+        type === 'number' ? (value === '' ? undefined : parseFloat(value)) : type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -227,10 +227,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-nord-3 sticky top-0 bg-nord-1 z-10">
           <h2 className="text-xl font-bold text-nord-6">Add Instance to {hostName}</h2>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-nord-2 rounded transition-colors text-nord-4"
-          >
+          <button onClick={onClose} className="p-1 hover:bg-nord-2 rounded transition-colors text-nord-4">
             <X size={20} />
           </button>
         </div>
@@ -239,9 +236,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Step 1: Primary Backend Selection */}
           <div>
-            <label className="block text-sm font-medium text-nord-4 mb-3">
-              Backend
-            </label>
+            <label className="block text-sm font-medium text-nord-4 mb-3">Backend</label>
             <div className="grid grid-cols-2 gap-3">
               {/* Llama.cpp */}
               <button
@@ -254,19 +249,18 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${primaryBackend === 'llamacpp' ? 'bg-nord-10 bg-opacity-20' : 'bg-nord-3'}`}>
-                    <Cpu 
-                      size={24} 
-                      className={primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-4'} 
-                    />
+                  <div
+                    className={`p-2 rounded-lg ${primaryBackend === 'llamacpp' ? 'bg-nord-10 bg-opacity-20' : 'bg-nord-3'}`}
+                  >
+                    <Cpu size={24} className={primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-4'} />
                   </div>
                   <div>
-                    <div className={`text-base font-semibold ${primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-6'}`}>
+                    <div
+                      className={`text-base font-semibold ${primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-6'}`}
+                    >
                       llama.cpp
                     </div>
-                    <div className="text-xs text-nord-4">
-                      GGUF models with llama-server
-                    </div>
+                    <div className="text-xs text-nord-4">GGUF models with llama-server</div>
                   </div>
                 </div>
               </button>
@@ -282,19 +276,18 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${primaryBackend === 'huggingface' ? 'bg-nord-14 bg-opacity-20' : 'bg-nord-3'}`}>
-                    <Brain 
-                      size={24} 
-                      className={primaryBackend === 'huggingface' ? 'text-nord-14' : 'text-nord-4'} 
-                    />
+                  <div
+                    className={`p-2 rounded-lg ${primaryBackend === 'huggingface' ? 'bg-nord-14 bg-opacity-20' : 'bg-nord-3'}`}
+                  >
+                    <Brain size={24} className={primaryBackend === 'huggingface' ? 'text-nord-14' : 'text-nord-4'} />
                   </div>
                   <div>
-                    <div className={`text-base font-semibold ${primaryBackend === 'huggingface' ? 'text-nord-14' : 'text-nord-6'}`}>
+                    <div
+                      className={`text-base font-semibold ${primaryBackend === 'huggingface' ? 'text-nord-14' : 'text-nord-6'}`}
+                    >
                       HuggingFace
                     </div>
-                    <div className="text-xs text-nord-4">
-                      Transformers models
-                    </div>
+                    <div className="text-xs text-nord-4">Transformers models</div>
                   </div>
                 </div>
               </button>
@@ -303,9 +296,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
           {/* Step 2: Mode Selection */}
           <div>
-            <label className="block text-sm font-medium text-nord-4 mb-3">
-              Mode
-            </label>
+            <label className="block text-sm font-medium text-nord-4 mb-3">Mode</label>
             <div className="grid grid-cols-3 gap-3">
               {modeOptions.map((option) => {
                 const Icon = option.icon;
@@ -321,28 +312,30 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                         ? `border-${accentColor} bg-${accentColor} bg-opacity-10`
                         : 'border-nord-3 hover:border-nord-4 bg-nord-2'
                     }`}
-                    style={isSelected ? {
-                      borderColor: primaryBackend === 'llamacpp' ? '#81A1C1' : '#A3BE8C',
-                      backgroundColor: primaryBackend === 'llamacpp' ? 'rgba(129, 161, 193, 0.1)' : 'rgba(163, 190, 140, 0.1)',
-                    } : {}}
+                    style={
+                      isSelected
+                        ? {
+                            borderColor: primaryBackend === 'llamacpp' ? '#81A1C1' : '#A3BE8C',
+                            backgroundColor:
+                              primaryBackend === 'llamacpp' ? 'rgba(129, 161, 193, 0.1)' : 'rgba(163, 190, 140, 0.1)',
+                          }
+                        : {}
+                    }
                   >
-                    <Icon 
-                      size={22} 
-                      className={`mx-auto ${isSelected 
-                        ? (primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-14')
-                        : 'text-nord-4'
-                      }`} 
+                    <Icon
+                      size={22}
+                      className={`mx-auto ${
+                        isSelected ? (primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-14') : 'text-nord-4'
+                      }`}
                     />
-                    <div className={`mt-2 text-sm font-medium ${
-                      isSelected 
-                        ? (primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-14')
-                        : 'text-nord-6'
-                    }`}>
+                    <div
+                      className={`mt-2 text-sm font-medium ${
+                        isSelected ? (primaryBackend === 'llamacpp' ? 'text-nord-10' : 'text-nord-14') : 'text-nord-6'
+                      }`}
+                    >
                       {option.label}
                     </div>
-                    <div className="text-xs text-nord-4 mt-1">
-                      {option.description}
-                    </div>
+                    <div className="text-xs text-nord-4 mt-1">{option.description}</div>
                   </button>
                 );
               })}
@@ -427,9 +420,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                   {/* Reasoning Budget - only for LLM mode */}
                   {llamaCppMode === 'llm' && (
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-nord-4 mb-1">
-                        Reasoning Budget (Optional)
-                      </label>
+                      <label className="block text-sm font-medium text-nord-4 mb-1">Reasoning Budget (Optional)</label>
                       <input
                         type="number"
                         name="reasoning_budget"
@@ -441,7 +432,8 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                         className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                       />
                       <p className="text-xs text-nord-4 mt-1">
-                        Passed as <code>--reasoning-budget</code>. Use <code>-1</code> for unrestricted, <code>0</code> to disable thinking. Leave blank to omit.
+                        Passed as <code>--reasoning-budget</code>. Use <code>-1</code> for unrestricted, <code>0</code>{' '}
+                        to disable thinking. Leave blank to omit.
                       </p>
                     </div>
                   )}
@@ -491,9 +483,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                   {/* Pooling - only for embedding mode */}
                   {llamaCppMode === 'embedding' && (
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-nord-4 mb-1">
-                        Pooling
-                      </label>
+                      <label className="block text-sm font-medium text-nord-4 mb-1">Pooling</label>
                       <select
                         name="pooling"
                         value={(formData as Partial<LlamaCppConfig>).pooling || ''}
@@ -507,17 +497,13 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                         <option value="last">Last</option>
                         <option value="rank">Rank</option>
                       </select>
-                      <p className="text-xs text-nord-4 mt-1">
-                        Pooling strategy for embedding models.
-                      </p>
+                      <p className="text-xs text-nord-4 mt-1">Pooling strategy for embedding models.</p>
                     </div>
                   )}
 
                   {/* Threads */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Threads
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Threads</label>
                     <input
                       type="number"
                       name="threads"
@@ -530,9 +516,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* GPU Layers */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      GPU Layers
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">GPU Layers</label>
                     <input
                       type="number"
                       name="n_gpu_layers"
@@ -545,9 +529,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* Context Size */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Context Size
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Context Size</label>
                     <input
                       type="number"
                       name="ctx_size"
@@ -561,9 +543,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* KV Cache Type K */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Cache Type K
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Cache Type K</label>
                     <select
                       name="cache_type_k"
                       value={(formData as Partial<LlamaCppConfig>).cache_type_k || ''}
@@ -588,9 +568,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* KV Cache Type V */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Cache Type V
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Cache Type V</label>
                     <select
                       name="cache_type_v"
                       value={(formData as Partial<LlamaCppConfig>).cache_type_v || ''}
@@ -615,9 +593,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* RoPE Scaling */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      RoPE Scaling
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">RoPE Scaling</label>
                     <select
                       name="rope_scaling"
                       value={(formData as Partial<LlamaCppConfig>).rope_scaling || ''}
@@ -636,9 +612,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* RoPE Scale */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      RoPE Scale
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">RoPE Scale</label>
                     <input
                       type="number"
                       name="rope_scale"
@@ -656,9 +630,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* YaRN Original Context */}
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      YaRN Original Context
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">YaRN Original Context</label>
                     <input
                       type="number"
                       name="yarn_orig_ctx"
@@ -679,9 +651,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                     <>
                       {/* Temperature */}
                       <div>
-                        <label className="block text-sm font-medium text-nord-4 mb-1">
-                          Temperature
-                        </label>
+                        <label className="block text-sm font-medium text-nord-4 mb-1">Temperature</label>
                         <input
                           type="number"
                           name="temp"
@@ -696,9 +666,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                       {/* Top P */}
                       <div>
-                        <label className="block text-sm font-medium text-nord-4 mb-1">
-                          Top P
-                        </label>
+                        <label className="block text-sm font-medium text-nord-4 mb-1">Top P</label>
                         <input
                           type="number"
                           name="top_p"
@@ -713,9 +681,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                       {/* Top K */}
                       <div>
-                        <label className="block text-sm font-medium text-nord-4 mb-1">
-                          Top K
-                        </label>
+                        <label className="block text-sm font-medium text-nord-4 mb-1">Top K</label>
                         <input
                           type="number"
                           name="top_k"
@@ -728,9 +694,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                       {/* Min P */}
                       <div>
-                        <label className="block text-sm font-medium text-nord-4 mb-1">
-                          Min P
-                        </label>
+                        <label className="block text-sm font-medium text-nord-4 mb-1">Min P</label>
                         <input
                           type="number"
                           name="min_p"
@@ -762,9 +726,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                       required
                       className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                     />
-                    <p className="text-xs text-nord-4 mt-1">
-                      HuggingFace model ID or local path
-                    </p>
+                    <p className="text-xs text-nord-4 mt-1">HuggingFace model ID or local path</p>
                   </div>
 
                   {/* Alias */}
@@ -785,9 +747,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* Device */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Device
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Device</label>
                     <select
                       name="device"
                       value={(formData as Partial<HuggingFaceCausalConfig>).device || 'auto'}
@@ -804,9 +764,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* Dtype */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Data Type
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Data Type</label>
                     <select
                       name="dtype"
                       value={(formData as Partial<HuggingFaceCausalConfig>).dtype || 'auto'}
@@ -823,9 +781,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
 
                   {/* Max Length */}
                   <div>
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Max Length
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Max Length</label>
                     <input
                       type="number"
                       name="max_length"
@@ -839,9 +795,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                   {/* Classification-specific: Labels */}
                   {huggingFaceMode === 'classifier' && (
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-nord-4 mb-1">
-                        Labels (Optional)
-                      </label>
+                      <label className="block text-sm font-medium text-nord-4 mb-1">Labels (Optional)</label>
                       <input
                         type="text"
                         value={labelsInput}
@@ -870,9 +824,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                         <label htmlFor="normalize_embeddings" className="block text-sm font-medium text-nord-4">
                           Normalize Embeddings
                         </label>
-                        <p className="text-xs text-nord-4">
-                          L2 normalize output embedding vectors
-                        </p>
+                        <p className="text-xs text-nord-4">L2 normalize output embedding vectors</p>
                       </div>
                     </div>
                   )}
@@ -891,9 +843,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                       <label htmlFor="trust_remote_code" className="block text-sm font-medium text-nord-4">
                         Trust Remote Code
                       </label>
-                      <p className="text-xs text-nord-4">
-                        Allow running custom model code from HuggingFace
-                      </p>
+                      <p className="text-xs text-nord-4">Allow running custom model code from HuggingFace</p>
                     </div>
                   </div>
 
@@ -920,7 +870,6 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                   )}
                 </>
               )}
-
             </div>
           </div>
 

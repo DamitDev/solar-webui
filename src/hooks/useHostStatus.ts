@@ -17,10 +17,12 @@ interface HostStatusUpdate {
 }
 
 // Try to use EventStreamContext if available
-let useEventStreamContextFn: (() => {
-  hosts: Map<string, any>;
-  isConnected: boolean;
-}) | null = null;
+let useEventStreamContextFn:
+  | (() => {
+      hosts: Map<string, any>;
+      isConnected: boolean;
+    })
+  | null = null;
 
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -32,13 +34,14 @@ try {
 
 export function useHostStatus(
   _onStatusUpdate: (update: HostStatusUpdate) => void,
-  onInitialStatus: (statuses: HostStatusUpdate[]) => void
+  onInitialStatus: (statuses: HostStatusUpdate[]) => void,
 ) {
   // Try to use EventStreamContext
   useEffect(() => {
     if (!useEventStreamContextFn) return;
 
     try {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       const ctx = useEventStreamContextFn();
 
       // Convert hosts map to array and call onInitialStatus

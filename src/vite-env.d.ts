@@ -5,4 +5,3 @@ interface ImportMetaEnv {
   readonly VITE_SOLAR_CONTROL_URL?: string;
   readonly VITE_SOLAR_CONTROL_API_KEY?: string;
 }
-

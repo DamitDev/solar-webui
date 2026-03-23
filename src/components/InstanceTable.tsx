@@ -82,9 +82,7 @@ export function InstanceTable({
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-nord-2 text-nord-4 text-xs uppercase tracking-wider">
-              {(onMoveUp || onMoveDown) && (
-                <th className="px-2 py-2 text-center w-12">Order</th>
-              )}
+              {(onMoveUp || onMoveDown) && <th className="px-2 py-2 text-center w-12">Order</th>}
               <th className="px-2 py-2 text-left">Alias</th>
               <th className="px-2 py-2 text-left">Model</th>
               <th className="px-2 py-2 text-center">Backend</th>
@@ -101,10 +99,7 @@ export function InstanceTable({
 
               return (
                 <>
-                  <tr
-                    key={instance.id}
-                    className="bg-nord-1 hover:bg-nord-2 transition-colors"
-                  >
+                  <tr key={instance.id} className="bg-nord-1 hover:bg-nord-2 transition-colors">
                     {/* Order arrows */}
                     {(onMoveUp || onMoveDown) && (
                       <td className="px-2 py-1 text-center">
@@ -130,9 +125,7 @@ export function InstanceTable({
                     )}
 
                     {/* Alias */}
-                    <td className="px-2 py-1 font-medium text-nord-6 whitespace-nowrap">
-                      {instance.config.alias}
-                    </td>
+                    <td className="px-2 py-1 font-medium text-nord-6 whitespace-nowrap">{instance.config.alias}</td>
 
                     {/* Model */}
                     <td className="px-2 py-1 text-nord-4 font-mono text-xs" title={model}>
@@ -144,7 +137,7 @@ export function InstanceTable({
                       <span
                         className={cn(
                           'inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-                          getFullModelColor(instance.config)
+                          getFullModelColor(instance.config),
                         )}
                       >
                         {getFullModelLabel(instance.config)}
@@ -156,7 +149,7 @@ export function InstanceTable({
                       <span
                         className={cn(
                           'inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-                          getStatusColor(instance.status)
+                          getStatusColor(instance.status),
                         )}
                       >
                         {instance.status}
@@ -164,9 +157,7 @@ export function InstanceTable({
                     </td>
 
                     {/* Port */}
-                    <td className="px-2 py-1 text-center font-mono text-nord-8 text-xs">
-                      {instance.port ?? '—'}
-                    </td>
+                    <td className="px-2 py-1 text-center font-mono text-nord-8 text-xs">{instance.port ?? '—'}</td>
 
                     {/* Uptime */}
                     <td className="px-2 py-1 font-mono text-xs text-nord-8 whitespace-nowrap">
@@ -249,7 +240,7 @@ export function InstanceTable({
                   {instance.error_message && (
                     <tr key={`${instance.id}-error`} className="bg-nord-11 bg-opacity-10">
                       <td
-                        colSpan={(onMoveUp || onMoveDown) ? 8 : 7}
+                        colSpan={onMoveUp || onMoveDown ? 8 : 7}
                         className="px-3 py-1 text-xs text-nord-11 border-l-2 border-nord-11"
                       >
                         {instance.error_message}

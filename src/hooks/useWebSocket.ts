@@ -18,7 +18,7 @@ export function useWebSocket({ url, onMessage, onError }: UseWebSocketOptions) {
 
     try {
       const ws = new WebSocket(url);
-      
+
       ws.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
@@ -46,7 +46,7 @@ export function useWebSocket({ url, onMessage, onError }: UseWebSocketOptions) {
       ws.onclose = () => {
         console.log('WebSocket disconnected');
         setIsConnected(false);
-        
+
         // Attempt to reconnect after 3 seconds
         reconnectTimeoutRef.current = window.setTimeout(() => {
           console.log('Attempting to reconnect...');
@@ -65,12 +65,12 @@ export function useWebSocket({ url, onMessage, onError }: UseWebSocketOptions) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    
+
     if (wsRef.current) {
       wsRef.current.close();
       wsRef.current = null;
     }
-    
+
     setIsConnected(false);
   }, []);
 
@@ -93,4 +93,3 @@ export function useWebSocket({ url, onMessage, onError }: UseWebSocketOptions) {
     reconnect: connect,
   };
 }
-

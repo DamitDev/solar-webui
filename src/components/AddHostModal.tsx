@@ -36,10 +36,7 @@ export function AddHostModal({ onClose, onSuccess }: AddHostModalProps) {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-nord-3">
           <h2 className="text-lg font-semibold text-nord-6">Add Solar Host</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4">
             <X size={18} />
           </button>
         </div>
@@ -109,4 +106,3 @@ export function AddHostModal({ onClose, onSuccess }: AddHostModalProps) {
     </div>
   );
 }
-

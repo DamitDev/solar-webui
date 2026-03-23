@@ -14,7 +14,14 @@ import { X, Tags, Server, Binary, Search, MessageSquare, Zap } from 'lucide-reac
 import { useRoutingEventsContext, RequestState } from '@/context/RoutingEventsContext';
 import { useEventStreamContext } from '@/context/EventStreamContext';
 import { useInstances } from '@/hooks/useInstances';
-import { Instance, ApiEndpoint, getBackendType, getModelCategory, getFullModelLabel, getFullModelHexColor } from '@/api/types';
+import {
+  Instance,
+  ApiEndpoint,
+  getBackendType,
+  getModelCategory,
+  getFullModelLabel,
+  getFullModelHexColor,
+} from '@/api/types';
 import solarClient from '@/api/client';
 
 const SOLAR_CONTROL_NODE_ID = 'solar-control';
@@ -44,11 +51,11 @@ function getBrighterColor(color: string): string {
   const r = parseInt(color.slice(1, 3), 16);
   const g = parseInt(color.slice(3, 5), 16);
   const b = parseInt(color.slice(5, 7), 16);
-  
+
   const brighterR = Math.min(255, Math.round(r * 1.3));
   const brighterG = Math.min(255, Math.round(g * 1.3));
   const brighterB = Math.min(255, Math.round(b * 1.3));
-  
+
   return `#${brighterR.toString(16).padStart(2, '0')}${brighterG.toString(16).padStart(2, '0')}${brighterB.toString(16).padStart(2, '0')}`;
 }
 
@@ -108,13 +115,18 @@ export function RoutingGraph() {
     const newEdges: Edge[] = [];
     const currentEdgeIds = new Set<string>();
 
-    const onlineHosts = hosts.filter(h => h.status === 'online').length;
+    const onlineHosts = hosts.filter((h) => h.status === 'online').length;
     const totalInstances = hosts.reduce((sum, h) => sum + h.instances.length, 0);
-    const runningInstances = hosts.reduce((sum, h) => sum + h.instances.filter(i => i.status === 'running').length, 0);
-    const activeRequests = Array.from(requests.values()).filter(r => r.status === 'processing' || r.status === 'routed').length;
+    const runningInstances = hosts.reduce(
+      (sum, h) => sum + h.instances.filter((i) => i.status === 'running').length,
+      0,
+    );
+    const activeRequests = Array.from(requests.values()).filter(
+      (r) => r.status === 'processing' || r.status === 'routed',
+    ).length;
 
     const processingInstances = new Set<string>();
-    Array.from(requests.values()).forEach(req => {
+    Array.from(requests.values()).forEach((req) => {
       if ((req.status === 'processing' || req.status === 'routed') && req.host_id && req.instance_id) {
         processingInstances.add(`${req.host_id}-${req.instance_id}`);
       }
@@ -126,13 +138,13 @@ export function RoutingGraph() {
     const embeddingByHost = new Map<string, { hostName: string; hostStatus: string; instances: InstanceData[] }>();
     const rerankerByHost = new Map<string, { hostName: string; hostStatus: string; instances: InstanceData[] }>();
 
-    hosts.forEach(host => {
+    hosts.forEach((host) => {
       host.instances
-        .filter(instance => instance.status === 'running')
-        .forEach(instance => {
+        .filter((instance) => instance.status === 'running')
+        .forEach((instance) => {
           const category = getInstanceCategory(instance);
           const item: InstanceData = { hostId: host.id, hostName: host.name, instance };
-          
+
           if (category === 'classification') {
             if (!classificationByHost.has(host.id)) {
               classificationByHost.set(host.id, { hostName: host.name, hostStatus: host.status, instances: [] });
@@ -158,10 +170,13 @@ export function RoutingGraph() {
     });
 
     // Calculate max alias length for dynamic width
-    const allInstances = [...generationByHost.values(), ...classificationByHost.values(), ...embeddingByHost.values(), ...rerankerByHost.values()]
-      .flatMap(data => data.instances);
-    const maxAliasLength = allInstances.reduce((max, { instance }) => 
-      Math.max(max, instance.config.alias.length), 0);
+    const allInstances = [
+      ...generationByHost.values(),
+      ...classificationByHost.values(),
+      ...embeddingByHost.values(),
+      ...rerankerByHost.values(),
+    ].flatMap((data) => data.instances);
+    const maxAliasLength = allInstances.reduce((max, { instance }) => Math.max(max, instance.config.alias.length), 0);
     // Calculate width: base padding + estimated char width (roughly 7px per char for semibold text)
     const instanceBoxWidth = Math.max(130, Math.min(220, 30 + maxAliasLength * 7));
 
@@ -218,49 +233,52 @@ export function RoutingGraph() {
     const groupX = 840;
     const hostX = 1120;
     const instanceX = 1420;
-    
+
     const instanceHeight = 85;
     const hostGap = 20;
     const groupGap = 50;
-    
+
     // Calculate total heights
     let genTotalHeight = 0;
-    generationByHost.forEach(data => {
+    generationByHost.forEach((data) => {
       genTotalHeight += data.instances.length * instanceHeight + hostGap;
     });
     if (genTotalHeight > 0) genTotalHeight -= hostGap;
 
     let classTotalHeight = 0;
-    classificationByHost.forEach(data => {
+    classificationByHost.forEach((data) => {
       classTotalHeight += data.instances.length * instanceHeight + hostGap;
     });
     if (classTotalHeight > 0) classTotalHeight -= hostGap;
 
     let embedTotalHeight = 0;
-    embeddingByHost.forEach(data => {
+    embeddingByHost.forEach((data) => {
       embedTotalHeight += data.instances.length * instanceHeight + hostGap;
     });
     if (embedTotalHeight > 0) embedTotalHeight -= hostGap;
 
     let rerankTotalHeight = 0;
-    rerankerByHost.forEach(data => {
+    rerankerByHost.forEach((data) => {
       rerankTotalHeight += data.instances.length * instanceHeight + hostGap;
     });
     if (rerankTotalHeight > 0) rerankTotalHeight -= hostGap;
 
-    const totalHeight = genTotalHeight 
-      + (genTotalHeight > 0 && classTotalHeight > 0 ? groupGap : 0) + classTotalHeight
-      + ((genTotalHeight > 0 || classTotalHeight > 0) && embedTotalHeight > 0 ? groupGap : 0) + embedTotalHeight
-      + ((genTotalHeight > 0 || classTotalHeight > 0 || embedTotalHeight > 0) && rerankTotalHeight > 0 ? groupGap : 0) + rerankTotalHeight;
+    const totalHeight =
+      genTotalHeight +
+      (genTotalHeight > 0 && classTotalHeight > 0 ? groupGap : 0) +
+      classTotalHeight +
+      ((genTotalHeight > 0 || classTotalHeight > 0) && embedTotalHeight > 0 ? groupGap : 0) +
+      embedTotalHeight +
+      ((genTotalHeight > 0 || classTotalHeight > 0 || embedTotalHeight > 0) && rerankTotalHeight > 0 ? groupGap : 0) +
+      rerankTotalHeight;
     const startY = 100;
     const controlY = startY + totalHeight / 2 - 50;
 
     // 1. Endpoint nodes (leftmost infrastructure column)
     const endpointNodeHeight = 50;
     const endpointGap = 12;
-    const endpointsTotalHeight = endpoints.length > 0
-      ? endpoints.length * endpointNodeHeight + (endpoints.length - 1) * endpointGap
-      : 0;
+    const endpointsTotalHeight =
+      endpoints.length > 0 ? endpoints.length * endpointNodeHeight + (endpoints.length - 1) * endpointGap : 0;
     const endpointsStartY = controlY - endpointsTotalHeight / 2 + endpointNodeHeight / 2;
 
     endpoints.forEach((ep, idx) => {
@@ -305,8 +323,12 @@ export function RoutingGraph() {
           <div className="px-3 py-2">
             <div className="font-bold text-base mb-1 text-center">Solar Control</div>
             <div className="text-xs space-y-0.5 text-nord-6 opacity-90 text-left">
-              <div>{onlineHosts} / {hosts.length} hosts online</div>
-              <div>{runningInstances} / {totalInstances} instances</div>
+              <div>
+                {onlineHosts} / {hosts.length} hosts online
+              </div>
+              <div>
+                {runningInstances} / {totalInstances} instances
+              </div>
               <div>{activeRequests} active requests</div>
             </div>
           </div>
@@ -336,27 +358,26 @@ export function RoutingGraph() {
     }
 
     // Helper to create instance node
-    const createInstanceNode = (
-      hostId: string,
-      instance: Instance,
-      x: number,
-      y: number
-    ): string => {
+    const createInstanceNode = (hostId: string, instance: Instance, x: number, y: number): string => {
       const instanceNodeId = `instance-${hostId}-${instance.id}`;
       const backendType = getBackendType(instance.config);
       const backendDisplay = getBackendDisplay(instance);
       const instanceBg = '#88C0D0';
-      
+
       const isProcessing = processingInstances.has(`${hostId}-${instance.id}`);
       const runtime = getInstanceState(hostId, instance.id);
       const phase = runtime?.phase;
-      const prefillPct = typeof runtime?.prefill_progress === 'number' ? Math.round(runtime.prefill_progress * 100) : null;
-      
-      const borderColor = phase === 'prefill'
-        ? '#EBCB8B'
-        : phase === 'generating'
-        ? '#A3BE8C'
-        : isProcessing ? '#D08770' : getBrighterColor(instanceBg);
+      const prefillPct =
+        typeof runtime?.prefill_progress === 'number' ? Math.round(runtime.prefill_progress * 100) : null;
+
+      const borderColor =
+        phase === 'prefill'
+          ? '#EBCB8B'
+          : phase === 'generating'
+            ? '#A3BE8C'
+            : isProcessing
+              ? '#D08770'
+              : getBrighterColor(instanceBg);
 
       newNodes.push({
         id: instanceNodeId,
@@ -368,25 +389,19 @@ export function RoutingGraph() {
           label: (
             <div className="text-xs">
               <div className="flex items-center gap-1 mb-0.5">
-                <span 
+                <span
                   className="px-1 rounded text-[6px] font-medium leading-tight"
-                  style={{ 
+                  style={{
                     backgroundColor: backendDisplay.color,
-                    color: backendType === 'huggingface_classification' ? '#2E3440' : '#ECEFF4'
+                    color: backendType === 'huggingface_classification' ? '#2E3440' : '#ECEFF4',
                   }}
                 >
                   {backendDisplay.label}
                 </span>
               </div>
-              <div className="font-semibold">
-                {instance.config.alias}
-              </div>
+              <div className="font-semibold">{instance.config.alias}</div>
               <div className="text-[10px] text-nord-0 opacity-70">
-                {phase && phase !== 'idle' ? (
-                  <span className="uppercase font-medium">{phase}</span>
-                ) : (
-                  'idle'
-                )}
+                {phase && phase !== 'idle' ? <span className="uppercase font-medium">{phase}</span> : 'idle'}
                 {typeof runtime?.decode_tps === 'number' && phase === 'generating' && (
                   <span className="ml-1">{runtime.decode_tps.toFixed(1)} t/s</span>
                 )}
@@ -419,7 +434,7 @@ export function RoutingGraph() {
     if (generationByHost.size > 0) {
       const genStartY = currentY;
       const groupCenterY = genStartY + genTotalHeight / 2 - 20;
-      
+
       // Group node
       newNodes.push({
         id: GROUP_GENERATION_ID,
@@ -502,7 +517,7 @@ export function RoutingGraph() {
         let instanceY = hostY;
         data.instances.forEach(({ instance }) => {
           const instanceNodeId = createInstanceNode(hostId, instance, instanceX, instanceY);
-          
+
           // Edge: Host → Instance
           newEdges.push({
             id: `${hostNodeId}-to-${instanceNodeId}`,
@@ -511,7 +526,7 @@ export function RoutingGraph() {
             animated: false,
             style: { stroke: '#4C566A', strokeWidth: 1 },
           });
-          
+
           instanceY += instanceHeight;
         });
 
@@ -525,7 +540,7 @@ export function RoutingGraph() {
     if (classificationByHost.size > 0) {
       const classStartY = currentY;
       const groupCenterY = classStartY + classTotalHeight / 2 - 20;
-      
+
       // Group node
       newNodes.push({
         id: GROUP_CLASSIFICATION_ID,
@@ -608,7 +623,7 @@ export function RoutingGraph() {
         let instanceY = hostY;
         data.instances.forEach(({ instance }) => {
           const instanceNodeId = createInstanceNode(hostId, instance, instanceX, instanceY);
-          
+
           // Edge: Host → Instance
           newEdges.push({
             id: `${hostNodeId}-to-${instanceNodeId}`,
@@ -617,7 +632,7 @@ export function RoutingGraph() {
             animated: false,
             style: { stroke: '#4C566A', strokeWidth: 1 },
           });
-          
+
           instanceY += instanceHeight;
         });
 
@@ -631,7 +646,7 @@ export function RoutingGraph() {
     if (embeddingByHost.size > 0) {
       const embedStartY = currentY;
       const groupCenterY = embedStartY + embedTotalHeight / 2 - 20;
-      
+
       // Group node
       newNodes.push({
         id: GROUP_EMBEDDING_ID,
@@ -714,7 +729,7 @@ export function RoutingGraph() {
         let instanceY = hostY;
         data.instances.forEach(({ instance }) => {
           const instanceNodeId = createInstanceNode(hostId, instance, instanceX, instanceY);
-          
+
           // Edge: Host → Instance
           newEdges.push({
             id: `${hostNodeId}-to-${instanceNodeId}`,
@@ -723,7 +738,7 @@ export function RoutingGraph() {
             animated: false,
             style: { stroke: '#4C566A', strokeWidth: 1 },
           });
-          
+
           instanceY += instanceHeight;
         });
 
@@ -737,7 +752,7 @@ export function RoutingGraph() {
     if (rerankerByHost.size > 0) {
       const rerankStartY = currentY;
       const groupCenterY = rerankStartY + rerankTotalHeight / 2 - 20;
-      
+
       // Group node
       newNodes.push({
         id: GROUP_RERANKER_ID,
@@ -820,7 +835,7 @@ export function RoutingGraph() {
         let instanceY = hostY;
         data.instances.forEach(({ instance }) => {
           const instanceNodeId = createInstanceNode(hostId, instance, instanceX, instanceY);
-          
+
           // Edge: Host → Instance
           newEdges.push({
             id: `${hostNodeId}-to-${instanceNodeId}`,
@@ -829,7 +844,7 @@ export function RoutingGraph() {
             animated: false,
             style: { stroke: '#4C566A', strokeWidth: 1 },
           });
-          
+
           instanceY += instanceHeight;
         });
 
@@ -853,19 +868,16 @@ export function RoutingGraph() {
           label: (
             <div className="flex items-center gap-2">
               <div className="flex flex-col text-left">
-                <span className="font-semibold text-sm truncate max-w-[140px]" title={request.resolved_model || request.model}>
+                <span
+                  className="font-semibold text-sm truncate max-w-[140px]"
+                  title={request.resolved_model || request.model}
+                >
                   {request.resolved_model || request.model}
                 </span>
-                {request.host_name && (
-                  <span className="text-xs text-nord-6 opacity-80">{request.host_name}</span>
-                )}
-                <span className="text-xs text-nord-6 opacity-50">
-                  {request.request_id.substring(0, 8)}
-                </span>
+                {request.host_name && <span className="text-xs text-nord-6 opacity-80">{request.host_name}</span>}
+                <span className="text-xs text-nord-6 opacity-50">{request.request_id.substring(0, 8)}</span>
                 {request.duration && (
-                  <span className="text-xs text-nord-6 opacity-80 font-medium">
-                    {request.duration.toFixed(2)}s
-                  </span>
+                  <span className="text-xs text-nord-6 opacity-80 font-medium">{request.duration.toFixed(2)}s</span>
                 )}
               </div>
               {request.status === 'error' && (
@@ -894,9 +906,7 @@ export function RoutingGraph() {
 
       const requestColor = getStatusColor(request.status);
       const hasKnownEndpoint = request.endpoint_id && endpoints.some((ep) => ep.id === request.endpoint_id);
-      const endpointColor = hasKnownEndpoint
-        ? getEndpointColor(endpoints, request.endpoint_id!)
-        : requestColor;
+      const endpointColor = hasKnownEndpoint ? getEndpointColor(endpoints, request.endpoint_id!) : requestColor;
       const edgeStrokeColor = hasKnownEndpoint ? endpointColor : requestColor;
 
       if (hasKnownEndpoint && request.endpoint_id) {
@@ -912,7 +922,11 @@ export function RoutingGraph() {
           animated: request.status === 'pending' || request.status === 'processing' || request.status === 'routed',
           style: { stroke: edgeStrokeColor, strokeWidth: 3 },
           markerEnd: { type: MarkerType.ArrowClosed, color: edgeStrokeColor },
-          className: request.removing ? 'request-edge removing-edge' : (isReqToEpNew ? 'request-edge request-edge-new' : 'request-edge'),
+          className: request.removing
+            ? 'request-edge removing-edge'
+            : isReqToEpNew
+              ? 'request-edge request-edge-new'
+              : 'request-edge',
         });
         // Edge: Endpoint → Solar Control
         const edgeEpToCtrlId = `${endpointNodeId}-to-control-${request.request_id}`;
@@ -925,7 +939,11 @@ export function RoutingGraph() {
           animated: request.status === 'pending' || request.status === 'processing' || request.status === 'routed',
           style: { stroke: edgeStrokeColor, strokeWidth: 3 },
           markerEnd: { type: MarkerType.ArrowClosed, color: edgeStrokeColor },
-          className: request.removing ? 'request-edge removing-edge' : (isEpToCtrlNew ? 'request-edge request-edge-new' : 'request-edge'),
+          className: request.removing
+            ? 'request-edge removing-edge'
+            : isEpToCtrlNew
+              ? 'request-edge request-edge-new'
+              : 'request-edge',
         });
       } else {
         // Edge: Request → Solar Control (direct when no endpoint_id)
@@ -939,7 +957,11 @@ export function RoutingGraph() {
           animated: request.status === 'pending' || request.status === 'processing' || request.status === 'routed',
           style: { stroke: requestColor, strokeWidth: 3 },
           markerEnd: { type: MarkerType.ArrowClosed, color: requestColor },
-          className: request.removing ? 'request-edge removing-edge' : (isEdge1New ? 'request-edge request-edge-new' : 'request-edge'),
+          className: request.removing
+            ? 'request-edge removing-edge'
+            : isEdge1New
+              ? 'request-edge request-edge-new'
+              : 'request-edge',
         });
       }
 
@@ -948,13 +970,13 @@ export function RoutingGraph() {
         const instanceNodeId = `instance-${request.host_id}-${request.instance_id}`;
         const hostNodeId = instanceToHost.get(instanceNodeId);
         const groupId = instanceToGroup.get(instanceNodeId);
-        
+
         if (groupId && hostNodeId) {
           // Edge: Solar Control → Group
           const edge2Id = `control-to-${groupId}-${request.request_id}`;
           const isEdge2New = !previousEdgeIdsRef.current.has(edge2Id);
           currentEdgeIds.add(edge2Id);
-          
+
           newEdges.push({
             id: edge2Id,
             source: SOLAR_CONTROL_NODE_ID,
@@ -962,14 +984,18 @@ export function RoutingGraph() {
             animated: request.status === 'processing' || request.status === 'routed',
             style: { stroke: getStatusColor(request.status), strokeWidth: 3 },
             markerEnd: { type: MarkerType.ArrowClosed, color: getStatusColor(request.status) },
-            className: request.removing ? 'request-edge removing-edge' : (isEdge2New ? 'request-edge request-edge-new' : 'request-edge'),
+            className: request.removing
+              ? 'request-edge removing-edge'
+              : isEdge2New
+                ? 'request-edge request-edge-new'
+                : 'request-edge',
           });
-          
+
           // Edge: Group → Host
           const edge3Id = `${groupId}-to-${hostNodeId}-${request.request_id}`;
           const isEdge3New = !previousEdgeIdsRef.current.has(edge3Id);
           currentEdgeIds.add(edge3Id);
-          
+
           newEdges.push({
             id: edge3Id,
             source: groupId,
@@ -977,14 +1003,18 @@ export function RoutingGraph() {
             animated: request.status === 'processing' || request.status === 'routed',
             style: { stroke: getStatusColor(request.status), strokeWidth: 3 },
             markerEnd: { type: MarkerType.ArrowClosed, color: getStatusColor(request.status) },
-            className: request.removing ? 'request-edge removing-edge' : (isEdge3New ? 'request-edge request-edge-new' : 'request-edge'),
+            className: request.removing
+              ? 'request-edge removing-edge'
+              : isEdge3New
+                ? 'request-edge request-edge-new'
+                : 'request-edge',
           });
-          
+
           // Edge: Host → Instance
           const edge4Id = `${hostNodeId}-to-${instanceNodeId}-${request.request_id}`;
           const isEdge4New = !previousEdgeIdsRef.current.has(edge4Id);
           currentEdgeIds.add(edge4Id);
-          
+
           newEdges.push({
             id: edge4Id,
             source: hostNodeId,
@@ -992,7 +1022,11 @@ export function RoutingGraph() {
             animated: request.status === 'processing' || request.status === 'routed',
             style: { stroke: getStatusColor(request.status), strokeWidth: 3 },
             markerEnd: { type: MarkerType.ArrowClosed, color: getStatusColor(request.status) },
-            className: request.removing ? 'request-edge removing-edge' : (isEdge4New ? 'request-edge request-edge-new' : 'request-edge'),
+            className: request.removing
+              ? 'request-edge removing-edge'
+              : isEdge4New
+                ? 'request-edge request-edge-new'
+                : 'request-edge',
           });
         }
       }
@@ -1028,9 +1062,7 @@ export function RoutingGraph() {
       `}</style>
       <div className="p-4 bg-nord-1 border-b border-nord-3">
         <h1 className="text-2xl font-bold text-nord-6">Solar Routing Visualization</h1>
-        <p className="text-sm text-nord-4 mt-1">
-          Real-time view of API requests flowing through the system
-        </p>
+        <p className="text-sm text-nord-4 mt-1">Real-time view of API requests flowing through the system</p>
       </div>
       <div style={{ height: 'calc(100vh - 160px)' }}>
         <ReactFlow
@@ -1051,13 +1083,13 @@ export function RoutingGraph() {
           <MiniMap
             nodeColor={(node) => {
               if (node.id === SOLAR_CONTROL_NODE_ID) return '#5E81AC';
-              if (node.id.startsWith('endpoint-')) return node.style?.background as string || '#4C566A';
+              if (node.id.startsWith('endpoint-')) return (node.style?.background as string) || '#4C566A';
               if (node.id === GROUP_GENERATION_ID) return '#A3BE8C';
               if (node.id === GROUP_CLASSIFICATION_ID) return '#EBCB8B';
               if (node.id === GROUP_EMBEDDING_ID) return '#B48EAD';
               if (node.id === GROUP_RERANKER_ID) return '#D08770';
               if (node.id.startsWith('host-')) return '#434C5E';
-              if (node.id.startsWith('request-')) return node.style?.background as string || '#4C566A';
+              if (node.id.startsWith('request-')) return (node.style?.background as string) || '#4C566A';
               return '#88C0D0';
             }}
             style={{ backgroundColor: '#3B4252' }}

@@ -50,7 +50,7 @@ export function LogViewer({ hostId, instanceId, alias, onClose }: LogViewerProps
   // Fetch historical logs on mount
   useEffect(() => {
     let cancelled = false;
-  
+
     const fetchHistory = async () => {
       setLoadingHistory(true);
       setHistoryError(null);
@@ -143,20 +143,14 @@ export function LogViewer({ hostId, instanceId, alias, onClose }: LogViewerProps
             >
               {autoScroll ? <Pause size={18} /> : <Play size={18} />}
             </button>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4"
-            >
+            <button onClick={onClose} className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4">
               <X size={18} />
             </button>
           </div>
         </div>
 
         {/* Log content */}
-        <div
-          ref={logContainerRef}
-          className="flex-1 overflow-auto p-4 bg-nord-0 text-nord-6 font-mono text-sm"
-        >
+        <div ref={logContainerRef} className="flex-1 overflow-auto p-4 bg-nord-0 text-nord-6 font-mono text-sm">
           {loadingHistory ? (
             <div className="text-nord-3">Loading historical logs...</div>
           ) : messages.length === 0 ? (

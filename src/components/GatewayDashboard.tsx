@@ -29,7 +29,7 @@ function calculatePresetDates(preset: TimePreset): { from: string; to: string } 
   const now = new Date();
   const to = isoInput(now);
   let fromDate: Date;
-  
+
   switch (preset) {
     case '1h':
       fromDate = new Date(now.getTime() - 60 * 60 * 1000);
@@ -52,20 +52,18 @@ function calculatePresetDates(preset: TimePreset): { from: string; to: string } 
     case 'custom':
     default:
       const nowUtc = new Date();
-      const startOfToday = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 0, 0, 0));
+      const startOfToday = new Date(
+        Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate(), 0, 0, 0),
+      );
       return { from: isoInput(startOfToday), to };
   }
-  
+
   return { from: isoInput(fromDate), to };
 }
 
 export function GatewayDashboard() {
   const { events, addRecentEvents } = useRoutingEventsContext();
-  const { 
-    gatewayRequests, 
-    setFilter, 
-    clearGatewayRequests 
-  } = useEventStreamContext();
+  const { gatewayRequests, setFilter, clearGatewayRequests } = useEventStreamContext();
 
   // Time range - initialize with 1d preset
   const initialPreset: TimePreset = '1d';
@@ -101,9 +99,12 @@ export function GatewayDashboard() {
   const toIso = useMemo(() => new Date(to).toISOString(), [to]);
 
   // Available hosts and models from stats
-  const availableHosts = useMemo(() => stats?.hosts?.map(h => ({ id: h.host_id, name: h.host_name || h.host_id })) || [], [stats]);
-  const availableModels = useMemo(() => stats?.models?.map(m => m.model) || [], [stats]);
-  const endpointNameById = useMemo(() => new Map(endpoints.map(ep => [ep.id, ep.name])), [endpoints]);
+  const availableHosts = useMemo(
+    () => stats?.hosts?.map((h) => ({ id: h.host_id, name: h.host_name || h.host_id })) || [],
+    [stats],
+  );
+  const availableModels = useMemo(() => stats?.models?.map((m) => m.model) || [], [stats]);
+  const endpointNameById = useMemo(() => new Map(endpoints.map((ep) => [ep.id, ep.name])), [endpoints]);
 
   // Update dates when preset changes
   useEffect(() => {
@@ -128,15 +129,18 @@ export function GatewayDashboard() {
 
   // Fetch endpoints on mount
   useEffect(() => {
-    solarClient.getEndpoints().then(setEndpoints).catch(() => setEndpoints([]));
+    solarClient
+      .getEndpoints()
+      .then(setEndpoints)
+      .catch(() => setEndpoints([]));
   }, []);
 
   // Fetch data functions
   const fetchStats = useCallback(async () => {
     setLoadingStats(true);
     try {
-      const s = await solarClient.getGatewayStats({ 
-        from: fromIso, 
+      const s = await solarClient.getGatewayStats({
+        from: fromIso,
         to: toIso,
         request_type: requestTypeFilter !== 'all' ? requestTypeFilter : undefined,
         endpoint_id: endpointFilter !== 'all' ? endpointFilter : undefined,
@@ -164,8 +168,10 @@ export function GatewayDashboard() {
           try {
             const s = await solarClient.getGatewayStats({ ...baseParams, endpoint_id: ep.id });
             results[ep.id] = s;
-          } catch { /* individual endpoint stat failure is non-fatal */ }
-        })
+          } catch {
+            /* individual endpoint stat failure is non-fatal */
+          }
+        }),
       );
       setEndpointStats(results);
     } catch (err) {
@@ -176,15 +182,15 @@ export function GatewayDashboard() {
   const fetchRequests = useCallback(async () => {
     setLoadingReqs(true);
     try {
-      const res = await solarClient.listGatewayRequests({ 
-        from: fromIso, 
-        to: toIso, 
+      const res = await solarClient.listGatewayRequests({
+        from: fromIso,
+        to: toIso,
         status: statusFilter !== 'all' ? statusFilter : undefined,
         request_type: requestTypeFilter !== 'all' ? requestTypeFilter : undefined,
         host_id: hostFilter !== 'all' ? hostFilter : undefined,
         model: modelFilter !== 'all' ? modelFilter : undefined,
         endpoint_id: endpointFilter !== 'all' ? endpointFilter : undefined,
-        page, 
+        page,
         limit,
       });
       setHistoricalRequests(res.items);
@@ -247,8 +253,8 @@ export function GatewayDashboard() {
       return historicalRequests.slice(0, limit);
     } else {
       // Merge WebSocket data with historical
-      const wsIds = new Set(gatewayRequests.map(r => r.request_id));
-      const filteredHistorical = historicalRequests.filter(r => !wsIds.has(r.request_id));
+      const wsIds = new Set(gatewayRequests.map((r) => r.request_id));
+      const filteredHistorical = historicalRequests.filter((r) => !wsIds.has(r.request_id));
       const merged = [...gatewayRequests, ...filteredHistorical];
       return merged.slice(0, limit);
     }
@@ -276,9 +282,7 @@ export function GatewayDashboard() {
                 key={p}
                 onClick={() => setPreset(p)}
                 className={`px-3 py-1 text-sm rounded ${
-                  preset === p
-                    ? 'bg-nord-10 text-nord-6 font-medium'
-                    : 'bg-nord-2 text-nord-6 hover:bg-nord-3'
+                  preset === p ? 'bg-nord-10 text-nord-6 font-medium' : 'bg-nord-2 text-nord-6 hover:bg-nord-3'
                 }`}
               >
                 {p === 'custom' ? 'Custom' : p}
@@ -310,13 +314,18 @@ export function GatewayDashboard() {
           )}
           <select
             value={endpointFilter}
-            onChange={(e) => { setPage(1); setEndpointFilter(e.target.value); }}
+            onChange={(e) => {
+              setPage(1);
+              setEndpointFilter(e.target.value);
+            }}
             className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1"
             title="Filter by endpoint"
           >
             <option value="all">All Endpoints</option>
             {endpoints.map((ep) => (
-              <option key={ep.id} value={ep.id}>{ep.name}</option>
+              <option key={ep.id} value={ep.id}>
+                {ep.name}
+              </option>
             ))}
           </select>
           <button onClick={refreshAll} className="px-3 py-2 bg-nord-3 text-nord-6 rounded hover:bg-nord-2">
@@ -360,19 +369,20 @@ export function GatewayDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
           <div
             className={`border rounded p-3 text-sm cursor-pointer transition-colors ${
-              endpointFilter === 'all'
-                ? 'bg-nord-10/20 border-nord-10'
-                : 'bg-nord-1 border-nord-3 hover:border-nord-4'
+              endpointFilter === 'all' ? 'bg-nord-10/20 border-nord-10' : 'bg-nord-1 border-nord-3 hover:border-nord-4'
             }`}
-            onClick={() => { setPage(1); setEndpointFilter('all'); }}
+            onClick={() => {
+              setPage(1);
+              setEndpointFilter('all');
+            }}
             title="Show all endpoints"
           >
             <div className="text-nord-6 font-medium">All</div>
             <div className="text-nord-4 text-xs mt-1">
               {(() => {
                 const all = endpointStats['all'];
-                const totalReqs = all ? (all.completed + all.missed + all.error) : 0;
-                const totalTokens = all ? (all.token_in_total + all.token_out_total) : 0;
+                const totalReqs = all ? all.completed + all.missed + all.error : 0;
+                const totalTokens = all ? all.token_in_total + all.token_out_total : 0;
                 return `${totalReqs} reqs • ${formatTokenCount(totalTokens)} tokens`;
               })()}
             </div>
@@ -389,11 +399,12 @@ export function GatewayDashboard() {
               <div
                 key={ep.id}
                 className={`border rounded p-3 text-sm cursor-pointer transition-colors ${
-                  isSelected
-                    ? 'bg-nord-10/20 border-nord-10'
-                    : 'bg-nord-1 border-nord-3 hover:border-nord-4'
+                  isSelected ? 'bg-nord-10/20 border-nord-10' : 'bg-nord-1 border-nord-3 hover:border-nord-4'
                 }`}
-                onClick={() => { setPage(1); setEndpointFilter(ep.id); }}
+                onClick={() => {
+                  setPage(1);
+                  setEndpointFilter(ep.id);
+                }}
                 title={`Filter to ${ep.name}`}
               >
                 <div className="text-nord-6 font-medium truncate">{ep.name}</div>
@@ -412,11 +423,16 @@ export function GatewayDashboard() {
         <div className="p-4 flex items-center justify-between border-b border-nord-3">
           <div className="text-nord-6 font-medium">Events (Errors & Reroutes)</div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={async () => {
-                const res = await solarClient.getRecentGatewayEvents({ from: fromIso, to: toIso, limit: 1000, types: 'request_error,request_reroute' });
+                const res = await solarClient.getRecentGatewayEvents({
+                  from: fromIso,
+                  to: toIso,
+                  limit: 1000,
+                  types: 'request_error,request_reroute',
+                });
                 addRecentEvents(res.items as unknown as any);
-              }} 
+              }}
               className="px-3 py-2 bg-nord-3 text-nord-6 rounded hover:bg-nord-2 flex items-center gap-2"
             >
               <RotateCcw size={16} /> Load recent
@@ -436,7 +452,9 @@ export function GatewayDashboard() {
                   <TriangleAlert className="text-nord-12" size={16} />
                 )}
                 <div className="text-nord-6">
-                  <span className="text-nord-4">[{formatDateTime((e as any).data?.timestamp || (e as any).timestamp)}]</span>{' '}
+                  <span className="text-nord-4">
+                    [{formatDateTime((e as any).data?.timestamp || (e as any).timestamp)}]
+                  </span>{' '}
                   <span className="uppercase text-xs px-2 py-0.5 rounded bg-nord-2 text-nord-4 mr-2">{e.type}</span>
                   <span>{(e as any).data?.model}</span>
                   {e.type === 'request_reroute' && (
@@ -459,7 +477,10 @@ export function GatewayDashboard() {
           <div className="flex items-center gap-2 flex-wrap">
             <select
               value={statusFilter}
-              onChange={(e) => { setPage(1); setStatusFilter(e.target.value as any); }}
+              onChange={(e) => {
+                setPage(1);
+                setStatusFilter(e.target.value as any);
+              }}
               className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1"
             >
               <option value="all">All Status</option>
@@ -469,7 +490,10 @@ export function GatewayDashboard() {
             </select>
             <select
               value={requestTypeFilter}
-              onChange={(e) => { setPage(1); setRequestTypeFilter(e.target.value); }}
+              onChange={(e) => {
+                setPage(1);
+                setRequestTypeFilter(e.target.value);
+              }}
               className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1"
             >
               <option value="all">All Types</option>
@@ -481,22 +505,32 @@ export function GatewayDashboard() {
             </select>
             <select
               value={hostFilter}
-              onChange={(e) => { setPage(1); setHostFilter(e.target.value); }}
+              onChange={(e) => {
+                setPage(1);
+                setHostFilter(e.target.value);
+              }}
               className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1"
             >
               <option value="all">All Hosts</option>
-              {availableHosts.map(h => (
-                <option key={h.id} value={h.id}>{h.name}</option>
+              {availableHosts.map((h) => (
+                <option key={h.id} value={h.id}>
+                  {h.name}
+                </option>
               ))}
             </select>
             <select
               value={modelFilter}
-              onChange={(e) => { setPage(1); setModelFilter(e.target.value); }}
+              onChange={(e) => {
+                setPage(1);
+                setModelFilter(e.target.value);
+              }}
               className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1"
             >
               <option value="all">All Models</option>
-              {availableModels.map(m => (
-                <option key={m} value={m}>{m}</option>
+              {availableModels.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </select>
             <button onClick={fetchRequests} className="px-3 py-2 bg-nord-3 text-nord-6 rounded hover:bg-nord-2">
@@ -538,7 +572,9 @@ export function GatewayDashboard() {
                     <td className="px-3 py-2">{r.resolved_model || r.model}</td>
                     <td className="px-3 py-2">
                       {r.status === 'success' ? (
-                        <span className="text-nord-14 flex items-center gap-1"><CheckCircle2 size={14} /> success</span>
+                        <span className="text-nord-14 flex items-center gap-1">
+                          <CheckCircle2 size={14} /> success
+                        </span>
                       ) : r.status === 'missed' ? (
                         <span className="text-nord-11">missed</span>
                       ) : (
@@ -554,7 +590,9 @@ export function GatewayDashboard() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={10} className="px-3 py-6 text-center text-nord-4">No data</td>
+                  <td colSpan={10} className="px-3 py-6 text-center text-nord-4">
+                    No data
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -565,9 +603,28 @@ export function GatewayDashboard() {
             Page {page} • {totalRequests} total
           </div>
           <div className="flex items-center gap-2">
-            <button disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))} className="px-3 py-1 bg-nord-2 text-nord-6 rounded disabled:opacity-50">Prev</button>
-            <button disabled={displayRequests.length < limit} onClick={() => setPage((p) => p + 1)} className="px-3 py-1 bg-nord-2 text-nord-6 rounded disabled:opacity-50">Next</button>
-            <select value={limit} onChange={(e) => { setPage(1); setLimit(parseInt(e.target.value, 10)); }} className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="px-3 py-1 bg-nord-2 text-nord-6 rounded disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <button
+              disabled={displayRequests.length < limit}
+              onClick={() => setPage((p) => p + 1)}
+              className="px-3 py-1 bg-nord-2 text-nord-6 rounded disabled:opacity-50"
+            >
+              Next
+            </button>
+            <select
+              value={limit}
+              onChange={(e) => {
+                setPage(1);
+                setLimit(parseInt(e.target.value, 10));
+              }}
+              className="bg-nord-2 text-nord-6 border border-nord-3 rounded px-2 py-1"
+            >
               <option value={15}>15</option>
               <option value={25}>25</option>
               <option value={50}>50</option>
@@ -593,16 +650,22 @@ export function GatewayDashboard() {
                 </tr>
               </thead>
               <tbody className="text-nord-6">
-                {stats?.models?.length ? stats.models.map((m) => (
-                  <tr key={m.model} className="border-t border-nord-3">
-                    <td className="px-3 py-2">{m.model}</td>
-                    <td className="px-3 py-2">{m.completed}</td>
-                    <td className="px-3 py-2">{formatTokenCount(m.token_in)}</td>
-                    <td className="px-3 py-2">{formatTokenCount(m.token_out)}</td>
-                    <td className="px-3 py-2">{m.avg_duration_s.toFixed(2)}s</td>
+                {stats?.models?.length ? (
+                  stats.models.map((m) => (
+                    <tr key={m.model} className="border-t border-nord-3">
+                      <td className="px-3 py-2">{m.model}</td>
+                      <td className="px-3 py-2">{m.completed}</td>
+                      <td className="px-3 py-2">{formatTokenCount(m.token_in)}</td>
+                      <td className="px-3 py-2">{formatTokenCount(m.token_out)}</td>
+                      <td className="px-3 py-2">{m.avg_duration_s.toFixed(2)}s</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-4 text-center text-nord-4">
+                      No data
+                    </td>
                   </tr>
-                )) : (
-                  <tr><td colSpan={5} className="px-3 py-4 text-center text-nord-4">No data</td></tr>
                 )}
               </tbody>
             </table>
@@ -622,16 +685,22 @@ export function GatewayDashboard() {
                 </tr>
               </thead>
               <tbody className="text-nord-6">
-                {stats?.hosts?.length ? stats.hosts.map((h) => (
-                  <tr key={h.host_id} className="border-t border-nord-3">
-                    <td className="px-3 py-2">{h.host_name || h.host_id}</td>
-                    <td className="px-3 py-2">{h.completed}</td>
-                    <td className="px-3 py-2">{formatTokenCount(h.token_in)}</td>
-                    <td className="px-3 py-2">{formatTokenCount(h.token_out)}</td>
-                    <td className="px-3 py-2">{h.avg_duration_s.toFixed(2)}s</td>
+                {stats?.hosts?.length ? (
+                  stats.hosts.map((h) => (
+                    <tr key={h.host_id} className="border-t border-nord-3">
+                      <td className="px-3 py-2">{h.host_name || h.host_id}</td>
+                      <td className="px-3 py-2">{h.completed}</td>
+                      <td className="px-3 py-2">{formatTokenCount(h.token_in)}</td>
+                      <td className="px-3 py-2">{formatTokenCount(h.token_out)}</td>
+                      <td className="px-3 py-2">{h.avg_duration_s.toFixed(2)}s</td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="px-3 py-4 text-center text-nord-4">
+                      No data
+                    </td>
                   </tr>
-                )) : (
-                  <tr><td colSpan={5} className="px-3 py-4 text-center text-nord-4">No data</td></tr>
                 )}
               </tbody>
             </table>

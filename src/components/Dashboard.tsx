@@ -17,11 +17,7 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
 type ViewMode = 'cards' | 'table';
 
@@ -31,7 +27,9 @@ function readViewMode(): ViewMode {
   try {
     const raw = localStorage.getItem(VIEW_MODE_KEY);
     if (raw === 'cards' || raw === 'table') return raw;
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return 'cards';
 }
 
@@ -49,7 +47,7 @@ export function Dashboard() {
     isHostReachable,
   } = useInstances();
   const { pendingHosts } = useRoutingEventsContext();
-  
+
   const [showAddHost, setShowAddHost] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(readViewMode);
@@ -67,7 +65,7 @@ export function Dashboard() {
 
   const handleDeleteHost = async (hostId: string) => {
     if (!confirm('Are you sure you want to remove this host?')) return;
-    
+
     try {
       await solarClient.deleteHost(hostId);
       await refresh();
@@ -99,7 +97,7 @@ export function Dashboard() {
 
   const handleDeleteInstance = async (hostId: string, instanceId: string) => {
     if (!confirm('Are you sure you want to delete this instance?')) return;
-    
+
     try {
       await solarClient.deleteInstance(hostId, instanceId);
       await refresh();
@@ -112,14 +110,17 @@ export function Dashboard() {
   // DnD sensors with activation constraint to distinguish drag from click
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleHostDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    reorderHost(active.id as string, over.id as string);
-  }, [reorderHost]);
+  const handleHostDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      reorderHost(active.id as string, over.id as string);
+    },
+    [reorderHost],
+  );
 
   if (loading && hosts.length === 0) {
     return (
@@ -140,9 +141,7 @@ export function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-nord-6">Solar Dashboard</h1>
-              <p className="text-sm text-nord-4 mt-1">
-                Multi-Host LLM Manager
-              </p>
+              <p className="text-sm text-nord-4 mt-1">Multi-Host LLM Manager</p>
             </div>
             <div className="flex gap-2 items-center">
               {/* View mode toggle */}
@@ -151,9 +150,7 @@ export function Dashboard() {
                   onClick={() => handleViewModeToggle('cards')}
                   className={cn(
                     'flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors',
-                    viewMode === 'cards'
-                      ? 'bg-nord-10 text-nord-6'
-                      : 'text-nord-4 hover:text-nord-6'
+                    viewMode === 'cards' ? 'bg-nord-10 text-nord-6' : 'text-nord-4 hover:text-nord-6',
                   )}
                   title="Card view"
                 >
@@ -163,9 +160,7 @@ export function Dashboard() {
                   onClick={() => handleViewModeToggle('table')}
                   className={cn(
                     'flex items-center gap-1 px-3 py-1.5 rounded-md text-sm transition-colors',
-                    viewMode === 'table'
-                      ? 'bg-nord-10 text-nord-6'
-                      : 'text-nord-4 hover:text-nord-6'
+                    viewMode === 'table' ? 'bg-nord-10 text-nord-6' : 'text-nord-4 hover:text-nord-6',
                   )}
                   title="Table view"
                 >
@@ -204,19 +199,13 @@ export function Dashboard() {
           </div>
         )}
 
-        {pendingHosts.size > 0 && (
-          <PendingHostBanner pendingHosts={pendingHosts} onApproved={refresh} />
-        )}
+        {pendingHosts.size > 0 && <PendingHostBanner pendingHosts={pendingHosts} onApproved={refresh} />}
 
         {hosts.length === 0 ? (
           <div className="text-center py-16">
             <Server size={64} className="mx-auto text-nord-3 mb-4" />
-            <h2 className="text-2xl font-semibold text-nord-6 mb-2">
-              No hosts configured
-            </h2>
-            <p className="text-nord-4 mb-6">
-              Add your first solar-host to get started
-            </p>
+            <h2 className="text-2xl font-semibold text-nord-6 mb-2">No hosts configured</h2>
+            <p className="text-nord-4 mb-6">Add your first solar-host to get started</p>
             <button
               onClick={() => setShowAddHost(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-nord-10 text-nord-6 rounded-lg hover:bg-nord-9 transition-colors"
@@ -238,15 +227,8 @@ export function Dashboard() {
           />
         ) : (
           /* Cards view with drag-and-drop host reordering */
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleHostDragEnd}
-          >
-            <SortableContext
-              items={hosts.map((h) => h.id)}
-              strategy={verticalListSortingStrategy}
-            >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleHostDragEnd}>
+            <SortableContext items={hosts.map((h) => h.id)} strategy={verticalListSortingStrategy}>
               <div className="space-y-6">
                 {hosts.map((host) => (
                   <HostCard
@@ -270,12 +252,7 @@ export function Dashboard() {
       </main>
 
       {/* Modals */}
-      {showAddHost && (
-        <AddHostModal
-          onClose={() => setShowAddHost(false)}
-          onSuccess={() => refresh()}
-        />
-      )}
+      {showAddHost && <AddHostModal onClose={() => setShowAddHost(false)} onSuccess={() => refresh()} />}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { X, MessageSquare, Tags, Binary, Search } from 'lucide-react';
-import { 
-  Instance, 
-  InstanceConfig, 
-  getBackendType, 
+import {
+  Instance,
+  InstanceConfig,
+  getBackendType,
   getFullModelLabel,
   isLlamaCppConfig,
   isHuggingFaceCausalConfig,
@@ -27,7 +27,7 @@ const DTYPE_OPTIONS = ['auto', 'float16', 'bfloat16', 'float32'];
 
 const BackendIcon = ({ config }: { config: InstanceConfig }) => {
   const backendType = getBackendType(config);
-  
+
   if (isLlamaCppConfig(config)) {
     const llamaConfig = config as LlamaCppConfig;
     switch (llamaConfig.model_type) {
@@ -39,7 +39,7 @@ const BackendIcon = ({ config }: { config: InstanceConfig }) => {
         return <MessageSquare size={18} className="text-nord-10" />;
     }
   }
-  
+
   switch (backendType) {
     case 'huggingface_causal':
       return <MessageSquare size={18} className="text-nord-14" />;
@@ -67,7 +67,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
     }
     return { ...instance.config } as InstanceConfig;
   });
-  
+
   // Handle labels as comma-separated string
   const [labelsInput, setLabelsInput] = useState(() => {
     if (isHuggingFaceClassificationConfig(instance.config)) {
@@ -78,7 +78,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate required fields based on backend type
     if (isLlamaCppConfig(formData)) {
       if (!(formData as LlamaCppConfig).model || !formData.alias) {
@@ -93,10 +93,12 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
     }
 
     // Parse labels for classification models
-    let finalConfig = { ...formData };
+    const finalConfig = { ...formData };
     if (isHuggingFaceClassificationConfig(formData) && labelsInput.trim()) {
-      (finalConfig as HuggingFaceClassificationConfig).labels = 
-        labelsInput.split(',').map(l => l.trim()).filter(l => l);
+      (finalConfig as HuggingFaceClassificationConfig).labels = labelsInput
+        .split(',')
+        .map((l) => l.trim())
+        .filter((l) => l);
     }
 
     setLoading(true);
@@ -114,17 +116,11 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     const checked = (e.target as HTMLInputElement).checked;
-    
+
     setFormData((prev) => ({
       ...prev,
       [name]:
-        type === 'number'
-          ? value === ''
-            ? undefined
-            : parseFloat(value)
-          : type === 'checkbox'
-            ? checked
-            : value,
+        type === 'number' ? (value === '' ? undefined : parseFloat(value)) : type === 'checkbox' ? checked : value,
     }));
   };
 
@@ -137,10 +133,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
             <BackendIcon config={instance.config} />
             <h2 className="text-xl font-bold text-nord-6">Edit {getFullModelLabel(instance.config)} Instance</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-nord-2 rounded transition-colors text-nord-4"
-          >
+          <button onClick={onClose} className="p-1 hover:bg-nord-2 rounded transition-colors text-nord-4">
             <X size={20} />
           </button>
         </div>
@@ -199,9 +192,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Override Tensor (ot) */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Override Tensor (ot) (Optional)
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Override Tensor (ot) (Optional)</label>
                   <input
                     type="text"
                     name="ot"
@@ -217,9 +208,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Model Type */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Model Type
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Model Type</label>
                   <select
                     name="model_type"
                     value={(formData as LlamaCppConfig).model_type || 'llm'}
@@ -237,9 +226,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Pooling */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Pooling (Optional)
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Pooling (Optional)</label>
                   <select
                     name="pooling"
                     value={(formData as LlamaCppConfig).pooling || ''}
@@ -277,9 +264,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Chat Template File */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Chat Template File (Optional)
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Chat Template File (Optional)</label>
                   <input
                     type="text"
                     name="chat_template_file"
@@ -292,9 +277,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Chat Template Kwargs */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Chat Template Kwargs (Optional)
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Chat Template Kwargs (Optional)</label>
                   <input
                     type="text"
                     name="chat_template_kwargs"
@@ -310,9 +293,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Reasoning Budget */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Reasoning Budget (Optional)
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Reasoning Budget (Optional)</label>
                   <input
                     type="number"
                     name="reasoning_budget"
@@ -324,15 +305,14 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                   />
                   <p className="text-xs text-nord-4 mt-1">
-                    Passed as <code>--reasoning-budget</code>. Use <code>-1</code> for unrestricted, <code>0</code> to disable thinking. Leave blank to omit.
+                    Passed as <code>--reasoning-budget</code>. Use <code>-1</code> for unrestricted, <code>0</code> to
+                    disable thinking. Leave blank to omit.
                   </p>
                 </div>
 
                 {/* Threads */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Threads
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Threads</label>
                   <input
                     type="number"
                     name="threads"
@@ -345,9 +325,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* GPU Layers */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    GPU Layers
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">GPU Layers</label>
                   <input
                     type="number"
                     name="n_gpu_layers"
@@ -360,9 +338,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Context Size */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Context Size
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Context Size</label>
                   <input
                     type="number"
                     name="ctx_size"
@@ -376,9 +352,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* KV Cache Type K */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Cache Type K
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Cache Type K</label>
                   <select
                     name="cache_type_k"
                     value={(formData as LlamaCppConfig).cache_type_k || ''}
@@ -403,9 +377,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* KV Cache Type V */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Cache Type V
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Cache Type V</label>
                   <select
                     name="cache_type_v"
                     value={(formData as LlamaCppConfig).cache_type_v || ''}
@@ -430,9 +402,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* RoPE Scaling */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    RoPE Scaling
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">RoPE Scaling</label>
                   <select
                     name="rope_scaling"
                     value={(formData as LlamaCppConfig).rope_scaling || ''}
@@ -451,9 +421,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* RoPE Scale */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    RoPE Scale
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">RoPE Scale</label>
                   <input
                     type="number"
                     name="rope_scale"
@@ -471,9 +439,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* YaRN Original Context */}
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    YaRN Original Context
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">YaRN Original Context</label>
                   <input
                     type="number"
                     name="yarn_orig_ctx"
@@ -491,9 +457,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Temperature */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Temperature
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Temperature</label>
                   <input
                     type="number"
                     name="temp"
@@ -508,9 +472,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Top P */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Top P
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Top P</label>
                   <input
                     type="number"
                     name="top_p"
@@ -525,9 +487,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Top K */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Top K
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Top K</label>
                   <input
                     type="number"
                     name="top_k"
@@ -540,9 +500,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Min P */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Min P
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Min P</label>
                   <input
                     type="number"
                     name="min_p"
@@ -572,9 +530,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     required
                     className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                   />
-                  <p className="text-xs text-nord-4 mt-1">
-                    HuggingFace model ID or local path
-                  </p>
+                  <p className="text-xs text-nord-4 mt-1">HuggingFace model ID or local path</p>
                 </div>
 
                 {/* Alias */}
@@ -595,9 +551,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Device */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Device
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Device</label>
                   <select
                     name="device"
                     value={(formData as HuggingFaceCausalConfig).device || 'auto'}
@@ -614,9 +568,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Dtype */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Data Type
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Data Type</label>
                   <select
                     name="dtype"
                     value={(formData as HuggingFaceCausalConfig).dtype || 'auto'}
@@ -633,9 +585,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
 
                 {/* Max Length */}
                 <div>
-                  <label className="block text-sm font-medium text-nord-4 mb-1">
-                    Max Length
-                  </label>
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Max Length</label>
                   <input
                     type="number"
                     name="max_length"
@@ -649,9 +599,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                 {/* Classification-specific: Labels */}
                 {isHuggingFaceClassificationConfig(formData) && (
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-nord-4 mb-1">
-                      Labels (Optional)
-                    </label>
+                    <label className="block text-sm font-medium text-nord-4 mb-1">Labels (Optional)</label>
                     <input
                       type="text"
                       value={labelsInput}
@@ -680,9 +628,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                       <label htmlFor="normalize_embeddings" className="block text-sm font-medium text-nord-4">
                         Normalize Embeddings
                       </label>
-                      <p className="text-xs text-nord-4">
-                        L2 normalize output embedding vectors
-                      </p>
+                      <p className="text-xs text-nord-4">L2 normalize output embedding vectors</p>
                     </div>
                   </div>
                 )}
@@ -701,9 +647,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                     <label htmlFor="trust_remote_code" className="block text-sm font-medium text-nord-4">
                       Trust Remote Code
                     </label>
-                    <p className="text-xs text-nord-4">
-                      Allow running custom model code from HuggingFace
-                    </p>
+                    <p className="text-xs text-nord-4">Allow running custom model code from HuggingFace</p>
                   </div>
                 </div>
 
@@ -730,7 +674,6 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                 )}
               </>
             )}
-
           </div>
 
           {/* Actions */}

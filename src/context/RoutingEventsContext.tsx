@@ -65,31 +65,37 @@ function RoutingEventsInner({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const value = useMemo<RoutingEventsContextValue>(() => ({
-    requests: eventStream.requests,
-    removeRequest: eventStream.removeRequest,
-    events,
-    addRecentEvents,
-    routingConnected: eventStream.isConnected,
-    statusConnected: eventStream.isConnected,
-    hostStatuses: eventStream.hosts,
-    pendingHosts: eventStream.pendingHosts,
-    hostInstances: eventStream.hostInstances,
-  }), [eventStream.requests, eventStream.removeRequest, eventStream.isConnected, eventStream.hosts, eventStream.pendingHosts, eventStream.hostInstances, events, addRecentEvents]);
-
-  return (
-    <RoutingEventsContext.Provider value={value}>
-      {children}
-    </RoutingEventsContext.Provider>
+  const value = useMemo<RoutingEventsContextValue>(
+    () => ({
+      requests: eventStream.requests,
+      removeRequest: eventStream.removeRequest,
+      events,
+      addRecentEvents,
+      routingConnected: eventStream.isConnected,
+      statusConnected: eventStream.isConnected,
+      hostStatuses: eventStream.hosts,
+      pendingHosts: eventStream.pendingHosts,
+      hostInstances: eventStream.hostInstances,
+    }),
+    [
+      eventStream.requests,
+      eventStream.removeRequest,
+      eventStream.isConnected,
+      eventStream.hosts,
+      eventStream.pendingHosts,
+      eventStream.hostInstances,
+      events,
+      addRecentEvents,
+    ],
   );
+
+  return <RoutingEventsContext.Provider value={value}>{children}</RoutingEventsContext.Provider>;
 }
 
 export function RoutingEventsProvider({ children }: { children: ReactNode }) {
   return (
     <EventStreamProvider>
-      <RoutingEventsInner>
-        {children}
-      </RoutingEventsInner>
+      <RoutingEventsInner>{children}</RoutingEventsInner>
     </EventStreamProvider>
   );
 }

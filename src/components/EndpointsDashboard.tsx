@@ -1,16 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import {
-  Plus,
-  RefreshCw,
-  AlertCircle,
-  Key,
-  Eye,
-  EyeOff,
-  Pencil,
-  Trash2,
-  BarChart3,
-  X,
-} from 'lucide-react';
+import { Plus, RefreshCw, AlertCircle, Key, Eye, EyeOff, Pencil, Trash2, BarChart3, X } from 'lucide-react';
 import solarClient from '@/api/client';
 import type { ApiEndpoint, EndpointUsageResponse } from '@/api/types';
 
@@ -51,9 +40,7 @@ function EndpointCard({ endpoint, usage, onEdit, onDelete }: EndpointCardProps) 
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-nord-6 truncate">{endpoint.name}</h3>
-          {endpoint.description && (
-            <p className="text-sm text-nord-4 mt-1 line-clamp-2">{endpoint.description}</p>
-          )}
+          {endpoint.description && <p className="text-sm text-nord-4 mt-1 line-clamp-2">{endpoint.description}</p>}
           <div className="mt-3 flex items-center gap-2">
             <code className="flex items-center gap-1.5 px-2 py-1 bg-nord-2 rounded text-sm text-nord-5 font-mono">
               <Key size={14} className="text-nord-4" />
@@ -91,12 +78,8 @@ function EndpointCard({ endpoint, usage, onEdit, onDelete }: EndpointCardProps) 
           <BarChart3 size={16} />
           <span>Requests: {totalRequests.toLocaleString()}</span>
         </div>
-        <div className="text-nord-4">
-          Tokens: {totalTokens.toLocaleString()}
-        </div>
-        <div className="text-nord-4">
-          Avg latency: {avgLatency}s
-        </div>
+        <div className="text-nord-4">Tokens: {totalTokens.toLocaleString()}</div>
+        <div className="text-nord-4">Avg latency: {avgLatency}s</div>
       </div>
     </div>
   );
@@ -133,10 +116,7 @@ function CreateEndpointModal({ onClose, onSuccess }: CreateEndpointModalProps) {
       <div className="bg-nord-1 rounded-lg shadow-2xl w-full max-w-md border border-nord-3">
         <div className="flex items-center justify-between p-4 border-b border-nord-3">
           <h2 className="text-lg font-semibold text-nord-6">Create API Endpoint</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4">
             <X size={18} />
           </button>
         </div>
@@ -225,10 +205,7 @@ function EditEndpointModal({ endpoint, onClose, onSuccess }: EditEndpointModalPr
       <div className="bg-nord-1 rounded-lg shadow-2xl w-full max-w-md border border-nord-3">
         <div className="flex items-center justify-between p-4 border-b border-nord-3">
           <h2 className="text-lg font-semibold text-nord-6">Edit Endpoint</h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4"
-          >
+          <button onClick={onClose} className="p-2 hover:bg-nord-2 rounded transition-colors text-nord-4">
             <X size={18} />
           </button>
         </div>
@@ -362,9 +339,7 @@ export function EndpointsDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-nord-6">API Endpoints</h1>
-              <p className="text-sm text-nord-4 mt-1">
-                Manage multi-tenant API keys and usage
-              </p>
+              <p className="text-sm text-nord-4 mt-1">Manage multi-tenant API keys and usage</p>
             </div>
             <div className="flex gap-2 items-center">
               <button
@@ -401,12 +376,8 @@ export function EndpointsDashboard() {
         {endpoints.length === 0 ? (
           <div className="text-center py-16">
             <Key size={64} className="mx-auto text-nord-3 mb-4" />
-            <h2 className="text-2xl font-semibold text-nord-6 mb-2">
-              No API endpoints
-            </h2>
-            <p className="text-nord-4 mb-6">
-              Create an endpoint to get an API key for your applications
-            </p>
+            <h2 className="text-2xl font-semibold text-nord-6 mb-2">No API endpoints</h2>
+            <p className="text-nord-4 mb-6">Create an endpoint to get an API key for your applications</p>
             <button
               onClick={() => setShowCreate(true)}
               className="inline-flex items-center gap-2 px-6 py-3 bg-nord-10 text-nord-6 rounded-lg hover:bg-nord-9 transition-colors"
@@ -430,12 +401,7 @@ export function EndpointsDashboard() {
         )}
       </main>
 
-      {showCreate && (
-        <CreateEndpointModal
-          onClose={() => setShowCreate(false)}
-          onSuccess={refresh}
-        />
-      )}
+      {showCreate && <CreateEndpointModal onClose={() => setShowCreate(false)} onSuccess={refresh} />}
       {editing && (
         <EditEndpointModal
           endpoint={editing}

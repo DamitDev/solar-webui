@@ -17,7 +17,9 @@ function readHostOrder(): string[] {
   try {
     const raw = localStorage.getItem(HOST_ORDER_KEY);
     if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return [];
 }
 
@@ -29,7 +31,9 @@ function readInstanceOrder(hostId: string): string[] {
   try {
     const raw = localStorage.getItem(INSTANCE_ORDER_KEY_PREFIX + hostId);
     if (raw) return JSON.parse(raw);
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
   return [];
 }
 
@@ -121,7 +125,7 @@ export function useInstances() {
           } catch {
             return { ...host, instances: [] };
           }
-        })
+        }),
       );
 
       setHosts(hostsWithInstances);
@@ -160,14 +164,16 @@ export function useInstances() {
         try {
           const instances = await solarClient.getHostInstances(hostId);
           if (cancelled) break;
-          setHosts((prev) =>
-            prev.map((h) => (h.id === hostId ? { ...h, instances } : h))
-          );
-        } catch { /* host might be offline, the socket data is enough */ }
+          setHosts((prev) => prev.map((h) => (h.id === hostId ? { ...h, instances } : h)));
+        } catch {
+          /* host might be offline, the socket data is enough */
+        }
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [hostInstances, hosts]);
 
   // When a new host appears in hostStatuses but not in our hosts list, add it
@@ -188,17 +194,23 @@ export function useInstances() {
           let instances: Instance[] = [];
           try {
             instances = await solarClient.getHostInstances(hostId);
-          } catch { /* ok */ }
+          } catch {
+            /* ok */
+          }
           if (cancelled) break;
           setHosts((prev) => {
             if (prev.some((h) => h.id === hostId)) return prev;
             return [...prev, { ...newHost, instances }];
           });
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [hostStatuses, hosts]);
 
   const startInstance = useCallback(async (hostId: string, instanceId: string) => {
@@ -221,49 +233,55 @@ export function useInstances() {
     [hostStatuses],
   );
 
-  const reorderHost = useCallback((activeId: string, overId: string) => {
-    setHostOrder((prev) => {
-      const currentIds = hosts.map((h) => h.id);
-      const fullOrder = applySavedOrder(
-        currentIds.map((id) => ({ id })),
-        prev
-      ).map((x) => x.id);
+  const reorderHost = useCallback(
+    (activeId: string, overId: string) => {
+      setHostOrder((prev) => {
+        const currentIds = hosts.map((h) => h.id);
+        const fullOrder = applySavedOrder(
+          currentIds.map((id) => ({ id })),
+          prev,
+        ).map((x) => x.id);
 
-      const oldIdx = fullOrder.indexOf(activeId);
-      const newIdx = fullOrder.indexOf(overId);
-      if (oldIdx === -1 || newIdx === -1) return prev;
+        const oldIdx = fullOrder.indexOf(activeId);
+        const newIdx = fullOrder.indexOf(overId);
+        if (oldIdx === -1 || newIdx === -1) return prev;
 
-      const updated = [...fullOrder];
-      updated.splice(oldIdx, 1);
-      updated.splice(newIdx, 0, activeId);
-      writeHostOrder(updated);
-      return updated;
-    });
-  }, [hosts]);
+        const updated = [...fullOrder];
+        updated.splice(oldIdx, 1);
+        updated.splice(newIdx, 0, activeId);
+        writeHostOrder(updated);
+        return updated;
+      });
+    },
+    [hosts],
+  );
 
-  const reorderInstance = useCallback((hostId: string, activeId: string, overId: string) => {
-    setInstanceOrders((prev) => {
-      const host = hosts.find((h) => h.id === hostId);
-      if (!host) return prev;
+  const reorderInstance = useCallback(
+    (hostId: string, activeId: string, overId: string) => {
+      setInstanceOrders((prev) => {
+        const host = hosts.find((h) => h.id === hostId);
+        if (!host) return prev;
 
-      const savedOrder = prev[hostId] ?? readInstanceOrder(hostId);
-      const currentIds = host.instances.map((i) => i.id);
-      const fullOrder = applySavedOrder(
-        currentIds.map((id) => ({ id })),
-        savedOrder
-      ).map((x) => x.id);
+        const savedOrder = prev[hostId] ?? readInstanceOrder(hostId);
+        const currentIds = host.instances.map((i) => i.id);
+        const fullOrder = applySavedOrder(
+          currentIds.map((id) => ({ id })),
+          savedOrder,
+        ).map((x) => x.id);
 
-      const oldIdx = fullOrder.indexOf(activeId);
-      const newIdx = fullOrder.indexOf(overId);
-      if (oldIdx === -1 || newIdx === -1) return prev;
+        const oldIdx = fullOrder.indexOf(activeId);
+        const newIdx = fullOrder.indexOf(overId);
+        if (oldIdx === -1 || newIdx === -1) return prev;
 
-      const updated = [...fullOrder];
-      updated.splice(oldIdx, 1);
-      updated.splice(newIdx, 0, activeId);
-      writeInstanceOrder(hostId, updated);
-      return { ...prev, [hostId]: updated };
-    });
-  }, [hosts]);
+        const updated = [...fullOrder];
+        updated.splice(oldIdx, 1);
+        updated.splice(newIdx, 0, activeId);
+        writeInstanceOrder(hostId, updated);
+        return { ...prev, [hostId]: updated };
+      });
+    },
+    [hosts],
+  );
 
   const mergedHosts = useMemo(() => {
     let result = hosts.map((host) => {

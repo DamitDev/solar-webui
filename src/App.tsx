@@ -25,9 +25,7 @@ function Navigation() {
         <Link
           to="/routing"
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            location.pathname === '/routing'
-              ? 'bg-nord-10 text-nord-6 font-medium'
-              : 'text-nord-4 hover:bg-nord-2'
+            location.pathname === '/routing' ? 'bg-nord-10 text-nord-6 font-medium' : 'text-nord-4 hover:bg-nord-2'
           }`}
         >
           <Activity size={18} />
@@ -36,9 +34,7 @@ function Navigation() {
         <Link
           to="/gateway"
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            location.pathname === '/gateway'
-              ? 'bg-nord-10 text-nord-6 font-medium'
-              : 'text-nord-4 hover:bg-nord-2'
+            location.pathname === '/gateway' ? 'bg-nord-10 text-nord-6 font-medium' : 'text-nord-4 hover:bg-nord-2'
           }`}
         >
           <Activity size={18} />
@@ -47,9 +43,7 @@ function Navigation() {
         <Link
           to="/hosts"
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            location.pathname === '/hosts'
-              ? 'bg-nord-10 text-nord-6 font-medium'
-              : 'text-nord-4 hover:bg-nord-2'
+            location.pathname === '/hosts' ? 'bg-nord-10 text-nord-6 font-medium' : 'text-nord-4 hover:bg-nord-2'
           }`}
         >
           <Server size={18} />
@@ -58,9 +52,7 @@ function Navigation() {
         <Link
           to="/endpoints"
           className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors ${
-            location.pathname === '/endpoints'
-              ? 'bg-nord-10 text-nord-6 font-medium'
-              : 'text-nord-4 hover:bg-nord-2'
+            location.pathname === '/endpoints' ? 'bg-nord-10 text-nord-6 font-medium' : 'text-nord-4 hover:bg-nord-2'
           }`}
         >
           <Key size={18} />
@@ -77,12 +69,12 @@ function Navigation() {
 
 function Layout() {
   return (
-      <RoutingEventsProvider>
-        <div className="min-h-screen bg-nord-0">
-          <Navigation />
+    <RoutingEventsProvider>
+      <div className="min-h-screen bg-nord-0">
+        <Navigation />
         <Outlet />
-        </div>
-      </RoutingEventsProvider>
+      </div>
+    </RoutingEventsProvider>
   );
 }
 
@@ -104,4 +96,3 @@ function App() {
 }
 
 export default App;
-

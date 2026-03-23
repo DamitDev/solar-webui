@@ -3,7 +3,19 @@ import { Instance, InstanceConfig, MemoryInfo, getModelCategory, ModelCategory }
 import { cn, getStatusColor, formatDate, getMemoryColor, formatMemoryUsage } from '@/lib/utils';
 import { InstanceCard } from './InstanceCard';
 import { AddInstanceModal } from './AddInstanceModal';
-import { Server, Trash2, Plus, MessageSquare, Brain, Tags, Binary, Search, GripVertical, Cpu, Microchip } from 'lucide-react';
+import {
+  Server,
+  Trash2,
+  Plus,
+  MessageSquare,
+  Brain,
+  Tags,
+  Binary,
+  Search,
+  GripVertical,
+  Cpu,
+  Microchip,
+} from 'lucide-react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -15,11 +27,7 @@ import {
   useSensors,
   DragEndEvent,
 } from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
+import { SortableContext, sortableKeyboardCoordinates, rectSortingStrategy } from '@dnd-kit/sortable';
 
 interface HostCardProps {
   host: {
@@ -120,14 +128,7 @@ function SortableInstanceCard({
   onUpdate: (hostId: string, instanceId: string, config: InstanceConfig) => Promise<void>;
   onDelete: (hostId: string, instanceId: string) => Promise<void>;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: instance.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: instance.id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -188,14 +189,17 @@ export function HostCard({
   // Instance DnD
   const instanceSensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  const handleInstanceDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    onReorderInstance(host.id, active.id as string, over.id as string);
-  }, [host.id, onReorderInstance]);
+  const handleInstanceDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      onReorderInstance(host.id, active.id as string, over.id as string);
+    },
+    [host.id, onReorderInstance],
+  );
 
   // Compute model category counts
   const categoryCounts = useMemo(() => {
@@ -217,193 +221,184 @@ export function HostCard({
     return counts;
   }, [host.instances]);
 
-  const activeCategories = (Object.entries(categoryCounts) as [ModelCategory, { total: number; running: number }][])
-    .filter(([, { total }]) => total > 0);
+  const activeCategories = (
+    Object.entries(categoryCounts) as [ModelCategory, { total: number; running: number }][]
+  ).filter(([, { total }]) => total > 0);
 
   return (
     <>
-    <div
-      ref={setHostNodeRef}
-      style={hostStyle}
-      {...hostAttributes}
-      className="bg-nord-1 rounded-lg shadow-lg overflow-hidden"
-    >
-      {/* Host Header */}
-      <div className="bg-gradient-to-r from-nord-10 to-nord-9 p-4">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            {/* Drag handle for host reordering */}
-            <button
-              {...hostListeners}
-              className="p-1 rounded cursor-grab active:cursor-grabbing hover:bg-white hover:bg-opacity-20 transition-colors text-nord-6 touch-none"
-              title="Drag to reorder host"
-            >
-              <GripVertical size={20} />
-            </button>
-            <Server size={24} />
-            <div>
-              <h2 className="text-xl font-bold text-nord-6">{host.name}</h2>
-              <p className="text-sm text-nord-4">{host.url}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {host.gpu_type && (
-              <span
-                className={cn(
-                  'px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1',
-                  getGpuTypeBadgeClass(host.gpu_type)
-                )}
-                title={`Acceleration: ${getGpuTypeLabel(host.gpu_type)}`}
+      <div
+        ref={setHostNodeRef}
+        style={hostStyle}
+        {...hostAttributes}
+        className="bg-nord-1 rounded-lg shadow-lg overflow-hidden"
+      >
+        {/* Host Header */}
+        <div className="bg-gradient-to-r from-nord-10 to-nord-9 p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              {/* Drag handle for host reordering */}
+              <button
+                {...hostListeners}
+                className="p-1 rounded cursor-grab active:cursor-grabbing hover:bg-white hover:bg-opacity-20 transition-colors text-nord-6 touch-none"
+                title="Drag to reorder host"
               >
-                {host.gpu_type === 'cpu' ? <Cpu size={12} /> : <Microchip size={12} />}
-                {getGpuTypeLabel(host.gpu_type)}
-              </span>
-            )}
-            <span
-              className={cn(
-                'px-3 py-1 rounded-full text-xs font-medium',
-                getStatusColor(host.status)
-              )}
-            >
-              {host.status}
-            </span>
-            {!hostReachable && (
-              <span className="px-2 py-1 rounded-full text-xs font-medium bg-nord-11 bg-opacity-30 text-nord-11">
-                disconnected
-              </span>
-            )}
-            <button
-              onClick={() => onDeleteHost(host.id)}
-              className="p-2 hover:bg-nord-8 hover:bg-opacity-30 rounded transition-colors text-nord-6"
-              title="Remove host"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-        </div>
-        
-        <div className="mt-3 flex items-center justify-between text-sm text-nord-4">
-          <div className="flex items-center gap-4">
-            <span>
-              {runningCount} / {host.instances.length} instances running
-            </span>
-            {activeCategories.length > 0 && (
-              <div className="flex items-center gap-2">
-                {activeCategories.map(([category, { total, running }]) => (
-                  <span
-                    key={category}
-                    className={cn(
-                      'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
-                      category === 'generation' && 'bg-nord-14 bg-opacity-30 text-nord-14',
-                      category === 'classification' && 'bg-nord-13 bg-opacity-30 text-nord-13',
-                      category === 'embedding' && 'bg-nord-15 bg-opacity-30 text-nord-15',
-                      category === 'reranker' && 'bg-nord-12 bg-opacity-30 text-nord-12'
-                    )}
-                    title={`${getCategoryLabel(category)}: ${running}/${total}`}
-                  >
-                    <CategoryIcon category={category} />
-                    <span>{running}/{total}</span>
-                  </span>
-                ))}
+                <GripVertical size={20} />
+              </button>
+              <Server size={24} />
+              <div>
+                <h2 className="text-xl font-bold text-nord-6">{host.name}</h2>
+                <p className="text-sm text-nord-4">{host.url}</p>
               </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {host.last_seen && <span>Last seen: {formatDate(host.last_seen)}</span>}
-            <button
-              onClick={() => setShowAddModal(true)}
-              disabled={!hostReachable}
-              className={cn(
-                "flex items-center gap-1 px-3 py-1 rounded transition-colors text-sm font-medium shadow-md",
-                hostReachable
-                  ? "bg-nord-6 hover:bg-nord-5 text-nord-0"
-                  : "bg-nord-3 text-nord-4 cursor-not-allowed opacity-60"
-              )}
-              title={hostReachable ? "Add instance" : "Host is offline"}
-            >
-              <Plus size={16} />
-              Add Instance
-            </button>
-          </div>
-        </div>
-
-        {/* Memory Usage */}
-        {host.memory && (
-          <div className="mt-3 space-y-1">
-            <div className="flex items-center justify-between text-xs text-nord-4">
-              <span className="font-medium">{host.memory.memory_type} Usage:</span>
-              <span>{formatMemoryUsage(host.memory.used_gb, host.memory.total_gb, host.memory.percent)}</span>
             </div>
-            <div className="w-full h-2 bg-nord-2 rounded-full overflow-hidden">
-              <div
-                className={cn("h-full transition-all duration-300 rounded-full", getMemoryColor(host.memory.percent))}
-                style={{ width: `${Math.min(host.memory.percent, 100)}%` }}
-              />
+            <div className="flex items-center gap-2">
+              {host.gpu_type && (
+                <span
+                  className={cn(
+                    'px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1',
+                    getGpuTypeBadgeClass(host.gpu_type),
+                  )}
+                  title={`Acceleration: ${getGpuTypeLabel(host.gpu_type)}`}
+                >
+                  {host.gpu_type === 'cpu' ? <Cpu size={12} /> : <Microchip size={12} />}
+                  {getGpuTypeLabel(host.gpu_type)}
+                </span>
+              )}
+              <span className={cn('px-3 py-1 rounded-full text-xs font-medium', getStatusColor(host.status))}>
+                {host.status}
+              </span>
+              {!hostReachable && (
+                <span className="px-2 py-1 rounded-full text-xs font-medium bg-nord-11 bg-opacity-30 text-nord-11">
+                  disconnected
+                </span>
+              )}
+              <button
+                onClick={() => onDeleteHost(host.id)}
+                className="p-2 hover:bg-nord-8 hover:bg-opacity-30 rounded transition-colors text-nord-6"
+                title="Remove host"
+              >
+                <Trash2 size={16} />
+              </button>
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Instances - Cards with drag-and-drop */}
-      <div className="p-4">
-        {host.instances.length === 0 ? (
-          <div className="text-center py-8 text-nord-4">
-            <p>No instances configured</p>
-            <button
-              onClick={() => setShowAddModal(true)}
-              disabled={!hostReachable}
-              className={cn(
-                "mt-4 px-6 py-3 rounded-lg transition-colors font-medium shadow-md",
-                hostReachable
-                  ? "bg-nord-10 text-nord-6 hover:bg-nord-9"
-                  : "bg-nord-3 text-nord-4 cursor-not-allowed opacity-60"
+          <div className="mt-3 flex items-center justify-between text-sm text-nord-4">
+            <div className="flex items-center gap-4">
+              <span>
+                {runningCount} / {host.instances.length} instances running
+              </span>
+              {activeCategories.length > 0 && (
+                <div className="flex items-center gap-2">
+                  {activeCategories.map(([category, { total, running }]) => (
+                    <span
+                      key={category}
+                      className={cn(
+                        'px-2 py-0.5 rounded-full text-xs font-medium flex items-center gap-1',
+                        category === 'generation' && 'bg-nord-14 bg-opacity-30 text-nord-14',
+                        category === 'classification' && 'bg-nord-13 bg-opacity-30 text-nord-13',
+                        category === 'embedding' && 'bg-nord-15 bg-opacity-30 text-nord-15',
+                        category === 'reranker' && 'bg-nord-12 bg-opacity-30 text-nord-12',
+                      )}
+                      title={`${getCategoryLabel(category)}: ${running}/${total}`}
+                    >
+                      <CategoryIcon category={category} />
+                      <span>
+                        {running}/{total}
+                      </span>
+                    </span>
+                  ))}
+                </div>
               )}
-              title={hostReachable ? undefined : "Host is offline"}
-            >
-              <Plus size={20} className="inline-block mr-2" />
-              Add First Instance
-            </button>
+            </div>
+            <div className="flex items-center gap-2">
+              {host.last_seen && <span>Last seen: {formatDate(host.last_seen)}</span>}
+              <button
+                onClick={() => setShowAddModal(true)}
+                disabled={!hostReachable}
+                className={cn(
+                  'flex items-center gap-1 px-3 py-1 rounded transition-colors text-sm font-medium shadow-md',
+                  hostReachable
+                    ? 'bg-nord-6 hover:bg-nord-5 text-nord-0'
+                    : 'bg-nord-3 text-nord-4 cursor-not-allowed opacity-60',
+                )}
+                title={hostReachable ? 'Add instance' : 'Host is offline'}
+              >
+                <Plus size={16} />
+                Add Instance
+              </button>
+            </div>
           </div>
-        ) : (
-          <DndContext
-            sensors={instanceSensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleInstanceDragEnd}
-          >
-            <SortableContext
-              items={host.instances.map((i) => i.id)}
-              strategy={rectSortingStrategy}
-            >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {host.instances.map((instance) => (
-                  <SortableInstanceCard
-                    key={instance.id}
-                    instance={instance}
-                    hostId={host.id}
-                    hostReachable={hostReachable}
-                    onStart={onStartInstance}
-                    onStop={onStopInstance}
-                    onRestart={onRestartInstance}
-                    onUpdate={onUpdateInstance}
-                    onDelete={onDeleteInstance}
-                  />
-                ))}
-              </div>
-            </SortableContext>
-          </DndContext>
-        )}
-      </div>
-    </div>
 
-    {/* Add Instance Modal */}
-    {showAddModal && (
-      <AddInstanceModal
-        hostId={host.id}
-        hostName={host.name}
-        onClose={() => setShowAddModal(false)}
-        onCreate={onCreateInstance}
-      />
-    )}
+          {/* Memory Usage */}
+          {host.memory && (
+            <div className="mt-3 space-y-1">
+              <div className="flex items-center justify-between text-xs text-nord-4">
+                <span className="font-medium">{host.memory.memory_type} Usage:</span>
+                <span>{formatMemoryUsage(host.memory.used_gb, host.memory.total_gb, host.memory.percent)}</span>
+              </div>
+              <div className="w-full h-2 bg-nord-2 rounded-full overflow-hidden">
+                <div
+                  className={cn('h-full transition-all duration-300 rounded-full', getMemoryColor(host.memory.percent))}
+                  style={{ width: `${Math.min(host.memory.percent, 100)}%` }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Instances - Cards with drag-and-drop */}
+        <div className="p-4">
+          {host.instances.length === 0 ? (
+            <div className="text-center py-8 text-nord-4">
+              <p>No instances configured</p>
+              <button
+                onClick={() => setShowAddModal(true)}
+                disabled={!hostReachable}
+                className={cn(
+                  'mt-4 px-6 py-3 rounded-lg transition-colors font-medium shadow-md',
+                  hostReachable
+                    ? 'bg-nord-10 text-nord-6 hover:bg-nord-9'
+                    : 'bg-nord-3 text-nord-4 cursor-not-allowed opacity-60',
+                )}
+                title={hostReachable ? undefined : 'Host is offline'}
+              >
+                <Plus size={20} className="inline-block mr-2" />
+                Add First Instance
+              </button>
+            </div>
+          ) : (
+            <DndContext sensors={instanceSensors} collisionDetection={closestCenter} onDragEnd={handleInstanceDragEnd}>
+              <SortableContext items={host.instances.map((i) => i.id)} strategy={rectSortingStrategy}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {host.instances.map((instance) => (
+                    <SortableInstanceCard
+                      key={instance.id}
+                      instance={instance}
+                      hostId={host.id}
+                      hostReachable={hostReachable}
+                      onStart={onStartInstance}
+                      onStop={onStopInstance}
+                      onRestart={onRestartInstance}
+                      onUpdate={onUpdateInstance}
+                      onDelete={onDeleteInstance}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
+        </div>
+      </div>
+
+      {/* Add Instance Modal */}
+      {showAddModal && (
+        <AddInstanceModal
+          hostId={host.id}
+          hostName={host.name}
+          onClose={() => setShowAddModal(false)}
+          onCreate={onCreateInstance}
+        />
+      )}
     </>
   );
 }

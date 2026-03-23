@@ -144,21 +144,16 @@ export function UnifiedTable({
               const isLoading = loadingId === instance.id;
               const reachable = isHostReachable(host.id);
               const disabled = isLoading || !reachable;
-              const offlineTitle = reachable ? undefined : "Host is offline";
+              const offlineTitle = reachable ? undefined : 'Host is offline';
               const model = getModelDisplay(instance.config);
 
               return (
                 <tr
                   key={`${host.id}-${instance.id}`}
-                  className={cn(
-                    "bg-nord-1 hover:bg-nord-2 transition-colors",
-                    !reachable && "opacity-70"
-                  )}
+                  className={cn('bg-nord-1 hover:bg-nord-2 transition-colors', !reachable && 'opacity-70')}
                 >
                   {/* Alias */}
-                  <td className="px-3 py-1.5 font-medium text-nord-6 whitespace-nowrap">
-                    {instance.config.alias}
-                  </td>
+                  <td className="px-3 py-1.5 font-medium text-nord-6 whitespace-nowrap">{instance.config.alias}</td>
 
                   {/* Model */}
                   <td className="px-3 py-1.5 text-nord-4 font-mono text-xs" title={model}>
@@ -170,7 +165,7 @@ export function UnifiedTable({
                     <span
                       className={cn(
                         'inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-                        getFullModelColor(instance.config)
+                        getFullModelColor(instance.config),
                       )}
                     >
                       {getFullModelLabel(instance.config)}
@@ -182,7 +177,7 @@ export function UnifiedTable({
                     <span
                       className={cn(
                         'inline-block px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap',
-                        getStatusColor(instance.status)
+                        getStatusColor(instance.status),
                       )}
                     >
                       {instance.status}
@@ -194,15 +189,16 @@ export function UnifiedTable({
                     <span className="flex items-center gap-1">
                       {host.name}
                       {!reachable && (
-                        <span className="inline-block w-2 h-2 rounded-full bg-nord-11 flex-shrink-0" title="Disconnected" />
+                        <span
+                          className="inline-block w-2 h-2 rounded-full bg-nord-11 flex-shrink-0"
+                          title="Disconnected"
+                        />
                       )}
                     </span>
                   </td>
 
                   {/* Port */}
-                  <td className="px-3 py-1.5 text-center font-mono text-nord-8 text-xs">
-                    {instance.port ?? '—'}
-                  </td>
+                  <td className="px-3 py-1.5 text-center font-mono text-nord-8 text-xs">{instance.port ?? '—'}</td>
 
                   {/* Uptime */}
                   <td className="px-3 py-1.5 font-mono text-xs text-nord-8 whitespace-nowrap">
@@ -218,7 +214,7 @@ export function UnifiedTable({
                             onClick={() => handleAction(instance.id, () => onStartInstance(host.id, instance.id))}
                             disabled={disabled}
                             className="p-1 rounded hover:bg-nord-14 hover:bg-opacity-20 text-nord-14 transition-colors disabled:opacity-50"
-                            title={offlineTitle || "Start"}
+                            title={offlineTitle || 'Start'}
                           >
                             <Play size={14} />
                           </button>
@@ -226,7 +222,7 @@ export function UnifiedTable({
                             onClick={() => setShowEditFor({ instance, hostId: host.id })}
                             disabled={disabled}
                             className="p-1 rounded hover:bg-nord-10 hover:bg-opacity-20 text-nord-10 transition-colors disabled:opacity-50"
-                            title={offlineTitle || "Edit"}
+                            title={offlineTitle || 'Edit'}
                           >
                             <Edit size={14} />
                           </button>
@@ -234,7 +230,7 @@ export function UnifiedTable({
                             onClick={() => handleAction(instance.id, () => onDeleteInstance(host.id, instance.id))}
                             disabled={disabled}
                             className="p-1 rounded hover:bg-nord-11 hover:bg-opacity-20 text-nord-11 transition-colors disabled:opacity-50"
-                            title={offlineTitle || "Delete"}
+                            title={offlineTitle || 'Delete'}
                           >
                             <Trash2 size={14} />
                           </button>
@@ -247,7 +243,7 @@ export function UnifiedTable({
                             onClick={() => handleAction(instance.id, () => onStopInstance(host.id, instance.id))}
                             disabled={disabled}
                             className="p-1 rounded hover:bg-nord-11 hover:bg-opacity-20 text-nord-11 transition-colors disabled:opacity-50"
-                            title={offlineTitle || "Stop"}
+                            title={offlineTitle || 'Stop'}
                           >
                             <Square size={14} />
                           </button>
@@ -255,7 +251,7 @@ export function UnifiedTable({
                             onClick={() => handleAction(instance.id, () => onRestartInstance(host.id, instance.id))}
                             disabled={disabled}
                             className="p-1 rounded hover:bg-nord-10 hover:bg-opacity-20 text-nord-10 transition-colors disabled:opacity-50"
-                            title={offlineTitle || "Restart"}
+                            title={offlineTitle || 'Restart'}
                           >
                             <RotateCw size={14} />
                           </button>

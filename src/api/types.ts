@@ -81,7 +81,11 @@ export interface HuggingFaceEmbeddingConfig extends BaseInstanceConfig {
 }
 
 // Union type for all config types
-export type InstanceConfig = LlamaCppConfig | HuggingFaceCausalConfig | HuggingFaceClassificationConfig | HuggingFaceEmbeddingConfig;
+export type InstanceConfig =
+  | LlamaCppConfig
+  | HuggingFaceCausalConfig
+  | HuggingFaceClassificationConfig
+  | HuggingFaceEmbeddingConfig;
 
 // Helper to check backend type
 export function isLlamaCppConfig(config: InstanceConfig): config is LlamaCppConfig {
@@ -327,7 +331,14 @@ export interface GatewayStats {
   avg_tokens_in: number;
   avg_tokens_out: number;
   models?: Array<{ model: string; completed: number; token_in: number; token_out: number; avg_duration_s: number }>;
-  hosts?: Array<{ host_id: string; host_name?: string; completed: number; token_in: number; token_out: number; avg_duration_s: number }>;
+  hosts?: Array<{
+    host_id: string;
+    host_name?: string;
+    completed: number;
+    token_in: number;
+    token_out: number;
+    avg_duration_s: number;
+  }>;
 }
 
 export interface GatewayRequestSummary {

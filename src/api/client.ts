@@ -74,7 +74,7 @@ class SolarClient {
           console.error('❌ 401 Unauthorized - solar-webui proxy may be missing SOLAR_CONTROL_API_KEY');
         }
         return Promise.reject(error);
-      }
+      },
     );
   }
 
@@ -99,7 +99,10 @@ class SolarClient {
     return response.data;
   }
 
-  async refreshAllHosts(): Promise<{ message: string; results: Array<{ host_id: string; name: string; status: string; message: string }> }> {
+  async refreshAllHosts(): Promise<{
+    message: string;
+    results: Array<{ host_id: string; name: string; status: string; message: string }>;
+  }> {
     const response = await this.client.post('/api/hosts/refresh-all');
     return response.data;
   }
@@ -146,7 +149,11 @@ class SolarClient {
     return response.data;
   }
 
-  async updateInstance(hostId: string, instanceId: string, config: any): Promise<{ instance: Instance; message: string }> {
+  async updateInstance(
+    hostId: string,
+    instanceId: string,
+    config: any,
+  ): Promise<{ instance: Instance; message: string }> {
     const response = await this.client.put(`/api/hosts/${hostId}/instances/${instanceId}`, { config });
     return response.data;
   }
@@ -163,7 +170,10 @@ class SolarClient {
   }
 
   // Instance logs (via solar-control proxy)
-  async getInstanceLogs(hostId: string, instanceId: string): Promise<Array<{ seq: number; timestamp: string; line: string }>> {
+  async getInstanceLogs(
+    hostId: string,
+    instanceId: string,
+  ): Promise<Array<{ seq: number; timestamp: string; line: string }>> {
     const response = await this.client.get(`/api/hosts/${hostId}/instances/${instanceId}/logs`);
     return response.data;
   }
@@ -220,7 +230,12 @@ class SolarClient {
   }
 
   // Gateway monitoring
-  async getGatewayStats(params: { from?: string; to?: string; request_type?: string; endpoint_id?: string }): Promise<GatewayStats> {
+  async getGatewayStats(params: {
+    from?: string;
+    to?: string;
+    request_type?: string;
+    endpoint_id?: string;
+  }): Promise<GatewayStats> {
     const response = await this.client.get('/api/gateway/stats', { params });
     return response.data as GatewayStats;
   }
@@ -302,11 +317,9 @@ class SolarClient {
     const response = await this.client.get(`/api/endpoints/${id}/usage`, { params: { hours } });
     return response.data;
   }
-
 }
 
 // Export a default instance
 const solarClient = new SolarClient();
 export default solarClient;
 export { SolarClient };
-

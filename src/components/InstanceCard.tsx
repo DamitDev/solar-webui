@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
-import { Play, Square, RotateCw, FileText, Trash2, Edit, MessageSquare, Tags, Binary, Search, GripVertical } from 'lucide-react';
-import { 
-  Instance, 
-  InstanceConfig, 
-  getBackendType, 
-  getFullModelLabel, 
+import {
+  Play,
+  Square,
+  RotateCw,
+  FileText,
+  Trash2,
+  Edit,
+  MessageSquare,
+  Tags,
+  Binary,
+  Search,
+  GripVertical,
+} from 'lucide-react';
+import {
+  Instance,
+  InstanceConfig,
+  getBackendType,
+  getFullModelLabel,
   getFullModelColor,
   isLlamaCppConfig,
   isHuggingFaceCausalConfig,
@@ -34,7 +46,7 @@ interface InstanceCardProps {
 
 const BackendIcon = ({ config }: { config: InstanceConfig }) => {
   const backendType = getBackendType(config);
-  
+
   if (isLlamaCppConfig(config)) {
     const llamaConfig = config as LlamaCppConfig;
     switch (llamaConfig.model_type) {
@@ -46,7 +58,7 @@ const BackendIcon = ({ config }: { config: InstanceConfig }) => {
         return <MessageSquare size={14} />;
     }
   }
-  
+
   switch (backendType) {
     case 'huggingface_causal':
       return <MessageSquare size={14} />;
@@ -81,8 +93,9 @@ export function InstanceCard({
   const [prefillVisible, setPrefillVisible] = useState(false);
   const hideTimerRef = useRef<number | null>(null);
   const backendType = getBackendType(instance.config);
-  const prefillActive = backendType === 'llamacpp' && 
-    typeof runtimeState?.prefill_progress === 'number' && 
+  const prefillActive =
+    backendType === 'llamacpp' &&
+    typeof runtimeState?.prefill_progress === 'number' &&
     runtimeState.prefill_progress < 1;
 
   useEffect(() => {
@@ -126,7 +139,12 @@ export function InstanceCard({
     if (isLlamaCppConfig(instance.config)) {
       return (instance.config as LlamaCppConfig).model || instance.config.alias || instance.id;
     }
-    return (instance.config as HuggingFaceCausalConfig | HuggingFaceClassificationConfig | HuggingFaceEmbeddingConfig).model_id || instance.config.alias || instance.id;
+    return (
+      (instance.config as HuggingFaceCausalConfig | HuggingFaceClassificationConfig | HuggingFaceEmbeddingConfig)
+        .model_id ||
+      instance.config.alias ||
+      instance.id
+    );
   };
 
   // Get backend-specific details (guards for incomplete config from Socket.IO placeholders)
@@ -185,7 +203,10 @@ export function InstanceCard({
           {config.labels && config.labels.length > 0 && (
             <div className="flex justify-between">
               <span>Labels:</span>
-              <span className="font-mono text-nord-8 text-right truncate max-w-[140px]" title={config.labels.join(', ')}>
+              <span
+                className="font-mono text-nord-8 text-right truncate max-w-[140px]"
+                title={config.labels.join(', ')}
+              >
                 {config.labels.length} defined
               </span>
             </div>
@@ -252,7 +273,7 @@ export function InstanceCard({
             <span
               className={cn(
                 'px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap flex items-center gap-1',
-                getFullModelColor(instance.config)
+                getFullModelColor(instance.config),
               )}
             >
               <BackendIcon config={instance.config} />
@@ -262,13 +283,16 @@ export function InstanceCard({
             <span
               className={cn(
                 'px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap',
-                getStatusColor(instance.status)
+                getStatusColor(instance.status),
               )}
             >
               {instance.status}
             </span>
             {runtimeState?.busy && (
-              <span className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-nord-13 text-nord-0 animate-pulse" title={`Active slots: ${runtimeState.active_slots}`}>
+              <span
+                className="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap bg-nord-13 text-nord-0 animate-pulse"
+                title={`Active slots: ${runtimeState.active_slots}`}
+              >
                 busy
               </span>
             )}
@@ -278,7 +302,7 @@ export function InstanceCard({
                   onClick={() => setShowEdit(true)}
                   disabled={actionsDisabled}
                   className="p-1 hover:bg-nord-10 hover:bg-opacity-20 text-nord-10 rounded transition-colors disabled:opacity-50"
-                  title={hostReachable ? "Edit instance" : "Host is offline"}
+                  title={hostReachable ? 'Edit instance' : 'Host is offline'}
                 >
                   <Edit size={16} />
                 </button>
@@ -286,7 +310,7 @@ export function InstanceCard({
                   onClick={() => handleAction(() => onDelete(hostId, instance.id))}
                   disabled={actionsDisabled}
                   className="p-1 hover:bg-nord-11 hover:bg-opacity-20 text-nord-11 rounded transition-colors disabled:opacity-50"
-                  title={hostReachable ? "Delete instance" : "Host is offline"}
+                  title={hostReachable ? 'Delete instance' : 'Host is offline'}
                 >
                   <Trash2 size={16} />
                 </button>
@@ -314,7 +338,8 @@ export function InstanceCard({
                 <span className="font-mono text-nord-8">
                   {typeof runtimeState?.prefill_progress === 'number'
                     ? Math.round(runtimeState.prefill_progress * 100)
-                    : 0}%
+                    : 0}
+                  %
                 </span>
               </div>
               <div className="w-full h-1.5 bg-nord-3 rounded">
@@ -348,14 +373,12 @@ export function InstanceCard({
           )}
           {/* Backend-specific details */}
           {renderBackendDetails()}
-          
+
           {/* Supported endpoints (if available) */}
           {instance.supported_endpoints && instance.supported_endpoints.length > 0 && (
             <div className="flex justify-between">
               <span>Endpoints:</span>
-              <span className="font-mono text-nord-8 text-xs">
-                {instance.supported_endpoints.length}
-              </span>
+              <span className="font-mono text-nord-8 text-xs">{instance.supported_endpoints.length}</span>
             </div>
           )}
         </div>
@@ -374,7 +397,7 @@ export function InstanceCard({
               onClick={() => handleAction(() => onStart(hostId, instance.id))}
               disabled={actionsDisabled}
               className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-nord-14 text-nord-0 rounded hover:bg-opacity-90 transition-colors disabled:opacity-50 font-medium"
-              title={hostReachable ? "Start instance" : "Host is offline"}
+              title={hostReachable ? 'Start instance' : 'Host is offline'}
             >
               <Play size={16} />
               Start
@@ -385,7 +408,7 @@ export function InstanceCard({
                 onClick={() => handleAction(() => onStop(hostId, instance.id))}
                 disabled={actionsDisabled}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-nord-11 text-nord-6 rounded hover:bg-opacity-90 transition-colors disabled:opacity-50 font-medium"
-                title={hostReachable ? "Stop instance" : "Host is offline"}
+                title={hostReachable ? 'Stop instance' : 'Host is offline'}
               >
                 <Square size={16} />
                 Stop
@@ -394,17 +417,14 @@ export function InstanceCard({
                 onClick={() => handleAction(() => onRestart(hostId, instance.id))}
                 disabled={actionsDisabled}
                 className="flex-1 flex items-center justify-center gap-1 px-3 py-2 bg-nord-10 text-nord-6 rounded hover:bg-nord-9 transition-colors disabled:opacity-50 font-medium"
-                title={hostReachable ? "Restart instance" : "Host is offline"}
+                title={hostReachable ? 'Restart instance' : 'Host is offline'}
               >
                 <RotateCw size={16} />
                 Restart
               </button>
             </>
           ) : (
-            <button
-              disabled
-              className="flex-1 px-3 py-2 bg-nord-3 text-nord-4 rounded cursor-not-allowed"
-            >
+            <button disabled className="flex-1 px-3 py-2 bg-nord-3 text-nord-4 rounded cursor-not-allowed">
               {instance.status}...
             </button>
           )}
@@ -430,12 +450,7 @@ export function InstanceCard({
 
       {/* Edit Instance Modal */}
       {showEdit && (
-        <EditInstanceModal
-          instance={instance}
-          hostId={hostId}
-          onClose={() => setShowEdit(false)}
-          onUpdate={onUpdate}
-        />
+        <EditInstanceModal instance={instance} hostId={hostId} onClose={() => setShowEdit(false)} onUpdate={onUpdate} />
       )}
     </>
   );

@@ -49,11 +49,7 @@ interface EventStreamProviderProps {
 export function EventStreamProvider({ children, handlers }: EventStreamProviderProps) {
   const eventStream = useEventStream(handlers);
 
-  return (
-    <EventStreamContext.Provider value={eventStream}>
-      {children}
-    </EventStreamContext.Provider>
-  );
+  return <EventStreamContext.Provider value={eventStream}>{children}</EventStreamContext.Provider>;
 }
 
 export function useEventStreamContext(): EventStreamContextValue {

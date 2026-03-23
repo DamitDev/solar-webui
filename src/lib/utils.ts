@@ -14,7 +14,7 @@ export function formatDate(date: string | undefined): string {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
   });
 }
 
@@ -23,7 +23,7 @@ export function formatDateTime(date: string | undefined): string {
   const d = new Date(date);
   return d.toLocaleString(undefined, {
     dateStyle: 'medium',
-    timeStyle: 'medium'
+    timeStyle: 'medium',
   });
 }
 
@@ -41,7 +41,7 @@ export function formatRelativeTime(date: string | undefined): string {
   if (diffMinutes < 60) return `${diffMinutes}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
-  
+
   return formatDate(date);
 }
 
@@ -50,12 +50,12 @@ export function formatUptime(startedAt: string | undefined): string {
   const start = new Date(startedAt).getTime();
   const now = Date.now();
   const diff = now - start;
-  
+
   const seconds = Math.floor(diff / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  
+
   if (days > 0) return `${days}d ${hours % 24}h`;
   if (hours > 0) return `${hours}h ${minutes % 60}m`;
   if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
@@ -102,30 +102,29 @@ export function formatTokenCount(count: number | undefined | null): string {
   if (count === 0) {
     return '0';
   }
-  
+
   const absCount = Math.abs(count);
-  
+
   // Billions
   if (absCount >= 1_000_000_000) {
     const billions = absCount / 1_000_000_000;
     return `${count < 0 ? '-' : ''}${billions.toFixed(2)}B`;
   }
-  
+
   // Millions
   if (absCount >= 1_000_000) {
     const millions = absCount / 1_000_000;
     return `${count < 0 ? '-' : ''}${millions.toFixed(2)}M`;
   }
-  
+
   // Thousands
   if (absCount >= 1_000) {
     const thousands = absCount / 1_000;
     return `${count < 0 ? '-' : ''}${thousands.toFixed(1)}K`;
   }
-  
+
   // Less than 1000, round to 1 decimal place for readability (especially for averages)
   // Remove trailing zeros for whole numbers
   const rounded = count.toFixed(1);
   return rounded.replace(/\.0$/, '');
 }
-

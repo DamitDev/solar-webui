@@ -244,202 +244,205 @@ export function useEventStream(handlers: EventHandlers = {}) {
     }, 350);
   }, []);
 
-  const handleEvent = useCallback((event: WSEvent) => {
-    const h = handlersRef.current;
+  const handleEvent = useCallback(
+    (event: WSEvent) => {
+      const h = handlersRef.current;
 
-    switch (event.type) {
-      case 'initial_status':
-        if (Array.isArray(event.data)) {
-          const hostMap = new Map<string, HostStatusData>();
-          event.data.forEach((host: HostStatusData) => {
-            hostMap.set(host.host_id, host);
-          });
-          setHosts(hostMap);
-          h.onInitialStatus?.(event.data);
-        }
-        break;
-
-      case 'host_status':
-        if (event.data) {
-          setHosts((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(event.data.host_id, event.data);
-            return newMap;
-          });
-          h.onHostStatus?.(event.data);
-        }
-        break;
-
-      case 'host_pending':
-        if (event.data?.pending_id) {
-          setPendingHosts((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(event.data.pending_id, event.data as PendingHost);
-            return newMap;
-          });
-        }
-        break;
-
-      case 'host_pending_removed':
-        if (event.data?.pending_id) {
-          setPendingHosts((prev) => {
-            const newMap = new Map(prev);
-            newMap.delete(event.data.pending_id);
-            return newMap;
-          });
-        }
-        break;
-
-      case 'instances_update':
-        if (event.data?.host_id && Array.isArray(event.data?.instances)) {
-          setHostInstances((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(event.data.host_id, event.data.instances);
-            return newMap;
-          });
-        }
-        break;
-
-      case 'log':
-        if (event.host_id && event.instance_id && event.data) {
-          const key = `${event.host_id}:${event.instance_id}`;
-          const logMsg: LogMessage = {
-            seq: event.data.seq,
-            timestamp: event.timestamp || new Date().toISOString(),
-            line: event.data.line,
-          };
-          setLogs((prev) => {
-            const newMap = new Map(prev);
-            const existing = newMap.get(key) || [];
-            // Keep last 1000 logs
-            const updated = [...existing, logMsg].slice(-1000);
-            newMap.set(key, updated);
-            return newMap;
-          });
-          h.onLog?.(event.host_id, event.instance_id, event.data);
-        }
-        break;
-
-      case 'instance_state':
-        if (event.host_id && event.instance_id && event.data) {
-          const key = `${event.host_id}:${event.instance_id}`;
-          setInstanceStates((prev) => {
-            const newMap = new Map(prev);
-            newMap.set(key, event.data);
-            return newMap;
-          });
-          h.onInstanceState?.(event.host_id, event.instance_id, event.data);
-        }
-        break;
-
-      case 'host_health':
-        if (event.host_id && event.data) {
-          const hostId = event.host_id;
-          setHosts((prev) => {
-            const newMap = new Map(prev);
-            const existing = newMap.get(hostId);
-            if (existing) {
-              newMap.set(hostId, {
-                ...existing,
-                memory: event.data.memory,
-                ...(event.data.gpu_type && { gpu_type: event.data.gpu_type }),
-              });
-            }
-            return newMap;
-          });
-        }
-        break;
-
-      case 'request_start':
-        if (event.data?.request_id) {
-          updateRequest(event.data.request_id, {
-            model: event.data.model,
-            endpoint: event.data.endpoint,
-            endpoint_id: event.data.endpoint_id,
-            status: 'pending',
-            timestamp: event.data.timestamp,
-            stream: event.data.stream,
-            client_ip: event.data.client_ip,
-          });
-          h.onRoutingEvent?.(event.type, event.data);
-        }
-        break;
-
-      case 'request_routed':
-        if (event.data?.request_id) {
-          updateRequest(event.data.request_id, {
-            host_id: event.data.host_id,
-            host_name: event.data.host_name,
-            instance_id: event.data.instance_id,
-            instance_url: event.data.instance_url,
-            resolved_model: event.data.resolved_model,
-            endpoint_id: event.data.endpoint_id,
-            status: 'processing',
-          });
-          h.onRoutingEvent?.(event.type, event.data);
-        }
-        break;
-
-      case 'request_success':
-        if (event.data?.request_id) {
-          updateRequest(event.data.request_id, {
-            status: 'success',
-            duration: event.data.duration,
-          });
-          h.onRoutingEvent?.(event.type, event.data);
-          // Auto-remove after 5 seconds
-          setTimeout(() => {
-            removeRequest(event.data.request_id);
-          }, 5000);
-        }
-        break;
-
-      case 'request_error':
-        if (event.data?.request_id) {
-          updateRequest(event.data.request_id, {
-            status: 'error',
-            error_message: event.data.error_message,
-            duration: event.data.duration,
-            host_id: event.data.host_id,
-            instance_id: event.data.instance_id,
-          });
-          h.onRoutingEvent?.(event.type, event.data);
-        }
-        break;
-
-      case 'request_reroute':
-        h.onRoutingEvent?.(event.type, event.data);
-        break;
-
-      case 'gateway_request':
-        // Completed request summary (client-side filter by endpoint_id)
-        if (event.data) {
-          const summary: GatewayRequestSummary = event.data;
-          const filterEp = gatewayFilterRef.current.endpoint_id;
-          if (filterEp && summary.endpoint_id !== filterEp) {
-            break;
+      switch (event.type) {
+        case 'initial_status':
+          if (Array.isArray(event.data)) {
+            const hostMap = new Map<string, HostStatusData>();
+            event.data.forEach((host: HostStatusData) => {
+              hostMap.set(host.host_id, host);
+            });
+            setHosts(hostMap);
+            h.onInitialStatus?.(event.data);
           }
-          setGatewayRequests((prev) => {
-            const updated = [summary, ...prev].slice(0, 500);
-            return updated;
-          });
-          h.onGatewayRequest?.(summary);
-        }
-        break;
+          break;
 
-      case 'filter_status':
-        // Filter configuration acknowledgement
-        if (event.filter) {
-          setGatewayFilter(event.filter);
-          h.onFilterStatus?.(event.filter);
-        }
-        break;
+        case 'host_status':
+          if (event.data) {
+            setHosts((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(event.data.host_id, event.data);
+              return newMap;
+            });
+            h.onHostStatus?.(event.data);
+          }
+          break;
 
-      case 'keepalive':
-        // Ignore keepalives
-        break;
-    }
-  }, [updateRequest, removeRequest]);
+        case 'host_pending':
+          if (event.data?.pending_id) {
+            setPendingHosts((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(event.data.pending_id, event.data as PendingHost);
+              return newMap;
+            });
+          }
+          break;
+
+        case 'host_pending_removed':
+          if (event.data?.pending_id) {
+            setPendingHosts((prev) => {
+              const newMap = new Map(prev);
+              newMap.delete(event.data.pending_id);
+              return newMap;
+            });
+          }
+          break;
+
+        case 'instances_update':
+          if (event.data?.host_id && Array.isArray(event.data?.instances)) {
+            setHostInstances((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(event.data.host_id, event.data.instances);
+              return newMap;
+            });
+          }
+          break;
+
+        case 'log':
+          if (event.host_id && event.instance_id && event.data) {
+            const key = `${event.host_id}:${event.instance_id}`;
+            const logMsg: LogMessage = {
+              seq: event.data.seq,
+              timestamp: event.timestamp || new Date().toISOString(),
+              line: event.data.line,
+            };
+            setLogs((prev) => {
+              const newMap = new Map(prev);
+              const existing = newMap.get(key) || [];
+              // Keep last 1000 logs
+              const updated = [...existing, logMsg].slice(-1000);
+              newMap.set(key, updated);
+              return newMap;
+            });
+            h.onLog?.(event.host_id, event.instance_id, event.data);
+          }
+          break;
+
+        case 'instance_state':
+          if (event.host_id && event.instance_id && event.data) {
+            const key = `${event.host_id}:${event.instance_id}`;
+            setInstanceStates((prev) => {
+              const newMap = new Map(prev);
+              newMap.set(key, event.data);
+              return newMap;
+            });
+            h.onInstanceState?.(event.host_id, event.instance_id, event.data);
+          }
+          break;
+
+        case 'host_health':
+          if (event.host_id && event.data) {
+            const hostId = event.host_id;
+            setHosts((prev) => {
+              const newMap = new Map(prev);
+              const existing = newMap.get(hostId);
+              if (existing) {
+                newMap.set(hostId, {
+                  ...existing,
+                  memory: event.data.memory,
+                  ...(event.data.gpu_type && { gpu_type: event.data.gpu_type }),
+                });
+              }
+              return newMap;
+            });
+          }
+          break;
+
+        case 'request_start':
+          if (event.data?.request_id) {
+            updateRequest(event.data.request_id, {
+              model: event.data.model,
+              endpoint: event.data.endpoint,
+              endpoint_id: event.data.endpoint_id,
+              status: 'pending',
+              timestamp: event.data.timestamp,
+              stream: event.data.stream,
+              client_ip: event.data.client_ip,
+            });
+            h.onRoutingEvent?.(event.type, event.data);
+          }
+          break;
+
+        case 'request_routed':
+          if (event.data?.request_id) {
+            updateRequest(event.data.request_id, {
+              host_id: event.data.host_id,
+              host_name: event.data.host_name,
+              instance_id: event.data.instance_id,
+              instance_url: event.data.instance_url,
+              resolved_model: event.data.resolved_model,
+              endpoint_id: event.data.endpoint_id,
+              status: 'processing',
+            });
+            h.onRoutingEvent?.(event.type, event.data);
+          }
+          break;
+
+        case 'request_success':
+          if (event.data?.request_id) {
+            updateRequest(event.data.request_id, {
+              status: 'success',
+              duration: event.data.duration,
+            });
+            h.onRoutingEvent?.(event.type, event.data);
+            // Auto-remove after 5 seconds
+            setTimeout(() => {
+              removeRequest(event.data.request_id);
+            }, 5000);
+          }
+          break;
+
+        case 'request_error':
+          if (event.data?.request_id) {
+            updateRequest(event.data.request_id, {
+              status: 'error',
+              error_message: event.data.error_message,
+              duration: event.data.duration,
+              host_id: event.data.host_id,
+              instance_id: event.data.instance_id,
+            });
+            h.onRoutingEvent?.(event.type, event.data);
+          }
+          break;
+
+        case 'request_reroute':
+          h.onRoutingEvent?.(event.type, event.data);
+          break;
+
+        case 'gateway_request':
+          // Completed request summary (client-side filter by endpoint_id)
+          if (event.data) {
+            const summary: GatewayRequestSummary = event.data;
+            const filterEp = gatewayFilterRef.current.endpoint_id;
+            if (filterEp && summary.endpoint_id !== filterEp) {
+              break;
+            }
+            setGatewayRequests((prev) => {
+              const updated = [summary, ...prev].slice(0, 500);
+              return updated;
+            });
+            h.onGatewayRequest?.(summary);
+          }
+          break;
+
+        case 'filter_status':
+          // Filter configuration acknowledgement
+          if (event.filter) {
+            setGatewayFilter(event.filter);
+            h.onFilterStatus?.(event.filter);
+          }
+          break;
+
+        case 'keepalive':
+          // Ignore keepalives
+          break;
+      }
+    },
+    [updateRequest, removeRequest],
+  );
 
   const setFilter = useCallback((filter: Partial<GatewayFilter>) => {
     setGatewayFilter((prevFilter) => {
@@ -488,62 +491,62 @@ export function useEventStream(handlers: EventHandlers = {}) {
       socketRef.current = socket;
       const webuiSocket = socket;
 
-    webuiSocket.on('connect', () => {
-      console.log('EventStream: Connected');
-      setIsConnected(true);
-    });
-
-    webuiSocket.on('disconnect', (reason) => {
-      console.log('EventStream: Disconnected', reason);
-      setIsConnected(false);
-    });
-
-    webuiSocket.on('connect_error', (err) => {
-      console.error('EventStream: Connection error', err.message);
-      setIsConnected(false);
-    });
-
-    // Map Socket.IO events (emitted by event name) to WSEvent format for handleEvent
-    const bindEvent = (eventName: string, toWSEvent: (payload: any) => WSEvent) => {
-      webuiSocket.on(eventName, (payload: any) => {
-        handleEvent(toWSEvent(payload));
+      webuiSocket.on('connect', () => {
+        console.log('EventStream: Connected');
+        setIsConnected(true);
       });
-    };
 
-    bindEvent('initial_status', (payload) => ({ type: 'initial_status', data: payload }));
-    bindEvent('host_status', (payload) => ({ type: 'host_status', data: payload }));
-    bindEvent('host_pending', (payload) => ({ type: 'host_pending', data: payload }));
-    bindEvent('host_pending_removed', (payload) => ({ type: 'host_pending_removed', data: payload }));
-    bindEvent('instances_update', (payload) => ({ type: 'instances_update', data: payload }));
-    bindEvent('host_health', (payload) => ({
-      type: 'host_health',
-      host_id: payload?.host_id,
-      data: payload?.data ?? payload,
-    }));
-    bindEvent('instance_state', (payload) => ({
-      type: 'instance_state',
-      host_id: payload?.host_id,
-      instance_id: payload?.instance_id,
-      timestamp: payload?.timestamp,
-      data: payload?.data ?? payload,
-    }));
-    bindEvent('log', (payload) => ({
-      type: 'log',
-      host_id: payload?.host_id,
-      instance_id: payload?.instance_id,
-      timestamp: payload?.timestamp,
-      data: payload?.data ?? payload,
-    }));
-    bindEvent('request_start', (payload) => ({ type: 'request_start', data: payload }));
-    bindEvent('request_routed', (payload) => ({ type: 'request_routed', data: payload }));
-    bindEvent('request_success', (payload) => ({ type: 'request_success', data: payload }));
-    bindEvent('request_error', (payload) => ({ type: 'request_error', data: payload }));
-    bindEvent('request_reroute', (payload) => ({ type: 'request_reroute', data: payload }));
-    bindEvent('gateway_request', (payload) => ({ type: 'gateway_request', data: payload }));
-    bindEvent('filter_status', (payload) => ({
-      type: 'filter_status',
-      filter: payload?.filter ?? payload,
-    }));
+      webuiSocket.on('disconnect', (reason) => {
+        console.log('EventStream: Disconnected', reason);
+        setIsConnected(false);
+      });
+
+      webuiSocket.on('connect_error', (err) => {
+        console.error('EventStream: Connection error', err.message);
+        setIsConnected(false);
+      });
+
+      // Map Socket.IO events (emitted by event name) to WSEvent format for handleEvent
+      const bindEvent = (eventName: string, toWSEvent: (payload: any) => WSEvent) => {
+        webuiSocket.on(eventName, (payload: any) => {
+          handleEvent(toWSEvent(payload));
+        });
+      };
+
+      bindEvent('initial_status', (payload) => ({ type: 'initial_status', data: payload }));
+      bindEvent('host_status', (payload) => ({ type: 'host_status', data: payload }));
+      bindEvent('host_pending', (payload) => ({ type: 'host_pending', data: payload }));
+      bindEvent('host_pending_removed', (payload) => ({ type: 'host_pending_removed', data: payload }));
+      bindEvent('instances_update', (payload) => ({ type: 'instances_update', data: payload }));
+      bindEvent('host_health', (payload) => ({
+        type: 'host_health',
+        host_id: payload?.host_id,
+        data: payload?.data ?? payload,
+      }));
+      bindEvent('instance_state', (payload) => ({
+        type: 'instance_state',
+        host_id: payload?.host_id,
+        instance_id: payload?.instance_id,
+        timestamp: payload?.timestamp,
+        data: payload?.data ?? payload,
+      }));
+      bindEvent('log', (payload) => ({
+        type: 'log',
+        host_id: payload?.host_id,
+        instance_id: payload?.instance_id,
+        timestamp: payload?.timestamp,
+        data: payload?.data ?? payload,
+      }));
+      bindEvent('request_start', (payload) => ({ type: 'request_start', data: payload }));
+      bindEvent('request_routed', (payload) => ({ type: 'request_routed', data: payload }));
+      bindEvent('request_success', (payload) => ({ type: 'request_success', data: payload }));
+      bindEvent('request_error', (payload) => ({ type: 'request_error', data: payload }));
+      bindEvent('request_reroute', (payload) => ({ type: 'request_reroute', data: payload }));
+      bindEvent('gateway_request', (payload) => ({ type: 'gateway_request', data: payload }));
+      bindEvent('filter_status', (payload) => ({
+        type: 'filter_status',
+        filter: payload?.filter ?? payload,
+      }));
     };
 
     connect();
@@ -562,7 +565,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
     (hostId: string, instanceId: string): LogMessage[] => {
       return logs.get(`${hostId}:${instanceId}`) || [];
     },
-    [logs]
+    [logs],
   );
 
   // Helper to get state for a specific instance
@@ -570,7 +573,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
     (hostId: string, instanceId: string): InstanceStateData | undefined => {
       return instanceStates.get(`${hostId}:${instanceId}`);
     },
-    [instanceStates]
+    [instanceStates],
   );
 
   // Helper to clear logs for an instance
