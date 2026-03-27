@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, RefreshCw, RotateCcw, TriangleAlert } from 'lucide-react';
 import solarClient from '@/api/client';
 import { ApiEndpoint, GatewayStats, GatewayRequestSummary } from '@/api/types';
@@ -63,7 +63,10 @@ function calculatePresetDates(preset: TimePreset): { from: string; to: string } 
 
 export function GatewayDashboard() {
   const { events, addRecentEvents } = useRoutingEventsContext();
-  const { gatewayRequests, setFilter, clearGatewayRequests } = useEventStreamContext();
+  const { gatewayRequests, setFilter, clearGatewayRequests, isConnected } = useEventStreamContext();
+  const countedIdsRef = useRef<Set<string>>(new Set());
+  const gatewayRequestsRef = useRef(gatewayRequests);
+  gatewayRequestsRef.current = gatewayRequests;
 
   // Time range - initialize with 1d preset
   const initialPreset: TimePreset = '1d';
@@ -146,6 +149,7 @@ export function GatewayDashboard() {
         endpoint_id: endpointFilter !== 'all' ? endpointFilter : undefined,
       });
       setStats(s);
+      countedIdsRef.current = new Set(gatewayRequestsRef.current.map((r) => r.request_id));
     } catch (err) {
       console.error('Failed to fetch gateway stats:', err);
     } finally {
@@ -219,18 +223,56 @@ export function GatewayDashboard() {
     fetchEndpointStats();
   }, [fetchEndpointStats]);
 
-  // Periodic refresh when live (every 30s)
+  // Periodic refresh when live -- only poll when Socket.IO is not connected
   useEffect(() => {
     if (!live) return;
+    const interval = isConnected ? 120000 : 30000;
     const id = window.setInterval(() => {
       if (preset !== 'custom') {
         const { from: newFrom, to: newTo } = calculatePresetDates(preset);
         setFrom(newFrom);
         setTo(newTo);
       }
-    }, 30000);
+    }, interval);
     return () => window.clearInterval(id);
-  }, [live, preset]);
+  }, [live, preset, isConnected]);
+
+  // Realtime stats update from Socket.IO gateway_request events
+  useEffect(() => {
+    if (!stats || !live) return;
+
+    const seen = countedIdsRef.current;
+    const newItems = gatewayRequests.filter((r) => !seen.has(r.request_id));
+    if (newItems.length === 0) return;
+
+    for (const r of newItems) seen.add(r.request_id);
+
+    setStats((prev) => {
+      if (!prev) return prev;
+      let { completed, missed, error, rerouted_requests, token_in_total, token_out_total } = prev;
+      let totalCompleted = completed + missed + error;
+      for (const r of newItems) {
+        if (r.status === 'success') completed++;
+        else if (r.status === 'missed') missed++;
+        else if (r.status === 'error') error++;
+        if (r.attempts > 1) rerouted_requests++;
+        token_in_total += r.prompt_tokens ?? 0;
+        token_out_total += r.completion_tokens ?? 0;
+      }
+      totalCompleted += newItems.length;
+      return {
+        ...prev,
+        completed,
+        missed,
+        error,
+        rerouted_requests,
+        token_in_total,
+        token_out_total,
+        avg_tokens_in: totalCompleted > 0 ? token_in_total / totalCompleted : 0,
+        avg_tokens_out: totalCompleted > 0 ? token_out_total / totalCompleted : 0,
+      };
+    });
+  }, [gatewayRequests, live, stats]);
 
   // Backfill recent events on mount
   useEffect(() => {
@@ -252,13 +294,27 @@ export function GatewayDashboard() {
     if (!live || page > 1) {
       return historicalRequests.slice(0, limit);
     } else {
-      // Merge WebSocket data with historical
-      const wsIds = new Set(gatewayRequests.map((r) => r.request_id));
+      let wsFiltered = gatewayRequests;
+      if (statusFilter !== 'all') {
+        wsFiltered = wsFiltered.filter((r) => r.status === statusFilter);
+      }
+      if (requestTypeFilter !== 'all') {
+        wsFiltered = wsFiltered.filter((r) => r.request_type === requestTypeFilter);
+      }
+      if (hostFilter !== 'all') {
+        wsFiltered = wsFiltered.filter((r) => r.host_id === hostFilter);
+      }
+      if (modelFilter !== 'all') {
+        wsFiltered = wsFiltered.filter(
+          (r) => (r.resolved_model || r.model) === modelFilter,
+        );
+      }
+      const wsIds = new Set(wsFiltered.map((r) => r.request_id));
       const filteredHistorical = historicalRequests.filter((r) => !wsIds.has(r.request_id));
-      const merged = [...gatewayRequests, ...filteredHistorical];
+      const merged = [...wsFiltered, ...filteredHistorical];
       return merged.slice(0, limit);
     }
-  }, [live, page, gatewayRequests, historicalRequests, limit]);
+  }, [live, page, gatewayRequests, historicalRequests, limit, statusFilter, requestTypeFilter, hostFilter, modelFilter]);
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">
