@@ -196,6 +196,19 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
         .filter((l) => l);
     }
 
+    // Strip empty strings from optional fields so the backend receives None
+    // and llama.cpp uses its own defaults
+    if (primaryBackend === 'llamacpp') {
+      const c = finalConfig as Partial<LlamaCppConfig>;
+      if (!c.cache_type_k) delete c.cache_type_k;
+      if (!c.cache_type_v) delete c.cache_type_v;
+      if (!c.rope_scaling) delete c.rope_scaling;
+      if (!c.chat_template_file) delete c.chat_template_file;
+      if (!c.chat_template_kwargs) delete c.chat_template_kwargs;
+      if (!c.ot) delete c.ot;
+      if (!c.pooling) delete c.pooling;
+    }
+
     setLoading(true);
     try {
       await onCreate(hostId, finalConfig as InstanceConfig);
