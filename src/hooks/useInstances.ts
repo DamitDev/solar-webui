@@ -227,10 +227,14 @@ export function useInstances() {
 
   const isHostReachable = useCallback(
     (hostId: string): boolean => {
-      const status = hostStatuses?.get(hostId);
-      return status?.connected === true;
+      const wsStatus = hostStatuses?.get(hostId);
+      if (wsStatus?.connected === true) return true;
+      const host = hosts.find((h) => h.id === hostId);
+      if (host && (host.status as string) === 'online') return true;
+      if (wsStatus && (wsStatus.status as string) === 'online') return true;
+      return false;
     },
-    [hostStatuses],
+    [hostStatuses, hosts],
   );
 
   const reorderHost = useCallback(
@@ -286,10 +290,16 @@ export function useInstances() {
   const mergedHosts = useMemo(() => {
     let result = hosts.map((host) => {
       const wsStatus = hostStatuses?.get(host.id);
+      let mergedStatus = host.status;
+      if (wsStatus) {
+        const restIsOnline = (host.status as string) === 'online';
+        const wsIsOffline = (wsStatus.status as string) === 'offline';
+        mergedStatus = (restIsOnline && wsIsOffline) ? host.status : (wsStatus.status as any);
+      }
       const base = wsStatus
         ? {
             ...host,
-            status: wsStatus.status as any,
+            status: mergedStatus,
             memory: wsStatus.memory || host.memory,
             gpu_type: wsStatus.gpu_type || host.gpu_type,
             roles: wsStatus.roles || host.roles,
