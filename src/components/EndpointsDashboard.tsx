@@ -36,14 +36,14 @@ function EndpointCard({ endpoint, usage, onEdit, onDelete }: EndpointCardProps) 
   const avgLatency = u?.avg_duration_s != null ? u.avg_duration_s.toFixed(2) : '—';
 
   return (
-    <div className="bg-nord-1 rounded-lg border border-nord-3 p-4 hover:border-nord-4 transition-colors">
+    <div className="bg-nord-1 rounded-lg border border-nord-3 p-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold text-nord-6 truncate">{endpoint.name}</h3>
           {endpoint.description && <p className="text-sm text-nord-4 mt-1 line-clamp-2">{endpoint.description}</p>}
           <div className="mt-3 flex items-center gap-2">
-            <code className="flex items-center gap-1.5 px-2 py-1 bg-nord-2 rounded text-sm text-nord-5 font-mono">
-              <Key size={14} className="text-nord-4" />
+            <code className="flex items-center gap-1.5 px-2 py-1 bg-nord-2 rounded text-sm text-nord-5 font-mono break-all">
+              <Key size={14} className="text-nord-4 shrink-0" />
               {showKey ? endpoint.api_key : maskApiKey(endpoint.api_key)}
             </code>
             <button
