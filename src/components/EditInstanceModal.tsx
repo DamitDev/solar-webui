@@ -101,6 +101,19 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
         .filter((l) => l);
     }
 
+    // Strip empty strings from optional fields so the backend receives None
+    // and llama.cpp uses its own defaults
+    if (isLlamaCppConfig(formData)) {
+      const c = finalConfig as Partial<LlamaCppConfig>;
+      if (!c.cache_type_k) delete c.cache_type_k;
+      if (!c.cache_type_v) delete c.cache_type_v;
+      if (!c.rope_scaling) delete c.rope_scaling;
+      if (!c.chat_template_file) delete c.chat_template_file;
+      if (!c.chat_template_kwargs) delete c.chat_template_kwargs;
+      if (!c.ot) delete c.ot;
+      if (!c.pooling) delete c.pooling;
+    }
+
     setLoading(true);
     try {
       await onUpdate(hostId, instance.id, finalConfig);
