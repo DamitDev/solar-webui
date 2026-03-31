@@ -305,16 +305,24 @@ export function GatewayDashboard() {
         wsFiltered = wsFiltered.filter((r) => r.host_id === hostFilter);
       }
       if (modelFilter !== 'all') {
-        wsFiltered = wsFiltered.filter(
-          (r) => (r.resolved_model || r.model) === modelFilter,
-        );
+        wsFiltered = wsFiltered.filter((r) => (r.resolved_model || r.model) === modelFilter);
       }
       const wsIds = new Set(wsFiltered.map((r) => r.request_id));
       const filteredHistorical = historicalRequests.filter((r) => !wsIds.has(r.request_id));
       const merged = [...wsFiltered, ...filteredHistorical];
       return merged.slice(0, limit);
     }
-  }, [live, page, gatewayRequests, historicalRequests, limit, statusFilter, requestTypeFilter, hostFilter, modelFilter]);
+  }, [
+    live,
+    page,
+    gatewayRequests,
+    historicalRequests,
+    limit,
+    statusFilter,
+    requestTypeFilter,
+    hostFilter,
+    modelFilter,
+  ]);
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-8">

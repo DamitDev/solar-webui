@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { X, Pause, Play, Download } from 'lucide-react';
 import { useEventStreamContext } from '@/context/EventStreamContext';
 import solarClient from '@/api/client';
@@ -22,30 +22,36 @@ export function LogViewer({ hostId, instanceId, alias, onClose }: LogViewerProps
   const { isConnected, getInstanceLogs, clearInstanceLogs } = useEventStreamContext();
   const streamLogs = getInstanceLogs(hostId, instanceId);
 
-  // Merge historical logs with stream logs, avoiding duplicates by seq number
-  const messages = (() => {
-    const seenSeqs = new Set<number>();
+  // Merge historical logs with stream logs, dedup by seq+timestamp
+  // (seq alone collides across instance restarts). Sort by timestamp
+  // so ordering is correct even when seq resets or messages arrive
+  // out of order via Socket.IO.
+  const messages = useMemo(() => {
+    const seen = new Set<string>();
     const merged: LogMessage[] = [];
 
-    // Add historical logs first
     for (const log of historicalLogs) {
-      if (!seenSeqs.has(log.seq)) {
-        seenSeqs.add(log.seq);
+      const key = `${log.seq}:${log.timestamp}`;
+      if (!seen.has(key)) {
+        seen.add(key);
         merged.push(log);
       }
     }
 
-    // Add stream logs (newer ones)
     for (const log of streamLogs) {
-      if (!seenSeqs.has(log.seq)) {
-        seenSeqs.add(log.seq);
+      const key = `${log.seq}:${log.timestamp}`;
+      if (!seen.has(key)) {
+        seen.add(key);
         merged.push(log);
       }
     }
 
-    // Sort by sequence number
-    return merged.sort((a, b) => a.seq - b.seq);
-  })();
+    return merged.sort((a, b) => {
+      if (a.timestamp < b.timestamp) return -1;
+      if (a.timestamp > b.timestamp) return 1;
+      return (a.seq ?? 0) - (b.seq ?? 0);
+    });
+  }, [historicalLogs, streamLogs]);
 
   // Fetch historical logs on mount
   useEffect(() => {
@@ -161,7 +167,7 @@ export function LogViewer({ hostId, instanceId, alias, onClose }: LogViewerProps
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.seq} className="whitespace-pre">
+              <div key={`${msg.seq}:${msg.timestamp}`} className="whitespace-pre">
                 <span className="text-nord-3">[{msg.timestamp}]</span> {msg.line}
               </div>
             ))
