@@ -110,6 +110,7 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
       if (!c.rope_scaling) delete c.rope_scaling;
       if (!c.chat_template_file) delete c.chat_template_file;
       if (!c.chat_template_kwargs) delete c.chat_template_kwargs;
+      if (!c.reasoning) delete c.reasoning;
       if (!c.ot) delete c.ot;
       if (!c.pooling) delete c.pooling;
     }
@@ -301,6 +302,25 @@ export function EditInstanceModal({ instance, hostId, onClose, onUpdate }: EditI
                   />
                   <p className="text-xs text-nord-4 mt-1">
                     JSON string passed to llama-server as <code>--chat-template-kwargs</code>.
+                  </p>
+                </div>
+
+                {/* Reasoning */}
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-nord-4 mb-1">Reasoning (Optional)</label>
+                  <select
+                    name="reasoning"
+                    value={(formData as LlamaCppConfig).reasoning || ''}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                  >
+                    <option value="">Default (not set)</option>
+                    <option value="on">On</option>
+                    <option value="off">Off</option>
+                    <option value="auto">Auto (detect from template)</option>
+                  </select>
+                  <p className="text-xs text-nord-4 mt-1">
+                    Passed as <code>--reasoning</code>. Controls thinking/reasoning mode for models that support it.
                   </p>
                 </div>
 
