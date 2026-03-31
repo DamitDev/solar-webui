@@ -307,6 +307,7 @@ export function useInstances() {
             disk_used_gb: wsStatus.disk_used_gb ?? host.disk_used_gb,
             disk_available_gb: wsStatus.disk_available_gb ?? host.disk_available_gb,
             memory_available_gb: wsStatus.memory_available_gb ?? host.memory_available_gb,
+            version: wsStatus.version || host.version,
           }
         : host;
 

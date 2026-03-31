@@ -57,6 +57,7 @@ export interface HostStatusData {
   disk_used_gb?: number;
   disk_available_gb?: number;
   memory_available_gb?: number;
+  version?: string;
   connected?: boolean;
   last_seen?: string;
   timestamp?: string;

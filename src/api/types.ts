@@ -256,6 +256,7 @@ export interface Host {
   disk_used_gb?: number;
   disk_available_gb?: number;
   memory_available_gb?: number;
+  version?: string;
   created_at: string;
 }
 

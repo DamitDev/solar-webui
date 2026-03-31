@@ -45,6 +45,7 @@ interface HostCardProps {
     disk_total_gb?: number;
     disk_used_gb?: number;
     disk_available_gb?: number;
+    version?: string;
     instances: Instance[];
   };
   hostReachable: boolean;
@@ -265,7 +266,10 @@ export function HostCard({
               <Server size={24} />
               <div>
                 <h2 className="text-xl font-bold text-nord-6">{host.name}</h2>
-                <p className="text-sm text-nord-4">{host.url}</p>
+                <p className="text-sm text-nord-4">
+                  {host.url}
+                  {host.version && <span className="ml-2 text-xs opacity-70">v{host.version}</span>}
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
