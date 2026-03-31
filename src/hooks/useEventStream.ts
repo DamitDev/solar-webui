@@ -357,6 +357,7 @@ export function useEventStream(handlers: EventHandlers = {}) {
                   ...(event.data.memory_available_gb != null && {
                     memory_available_gb: event.data.memory_available_gb,
                   }),
+                  ...(event.data.version && { version: event.data.version }),
                 });
               }
               return newMap;
