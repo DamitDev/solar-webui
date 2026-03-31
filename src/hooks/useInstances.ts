@@ -294,7 +294,7 @@ export function useInstances() {
       if (wsStatus) {
         const restIsOnline = (host.status as string) === 'online';
         const wsIsOffline = (wsStatus.status as string) === 'offline';
-        mergedStatus = (restIsOnline && wsIsOffline) ? host.status : (wsStatus.status as any);
+        mergedStatus = restIsOnline && wsIsOffline ? host.status : (wsStatus.status as any);
       }
       const base = wsStatus
         ? {
