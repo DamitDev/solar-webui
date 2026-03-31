@@ -36,6 +36,7 @@ export interface LlamaCppConfig extends BaseInstanceConfig {
   ctx_size: number;
   chat_template_file?: string;
   chat_template_kwargs?: string;
+  reasoning?: 'on' | 'off' | 'auto';
   reasoning_budget?: number;
   cache_type_k?: string;
   cache_type_v?: string;
