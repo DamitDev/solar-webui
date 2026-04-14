@@ -27,6 +27,8 @@ export interface BaseInstanceConfig {
 export interface LlamaCppConfig extends BaseInstanceConfig {
   backend_type: 'llamacpp';
   model: string;
+  /** Path to multimodal projector GGUF (llama-server --mmproj) */
+  mmproj?: string;
   threads: number;
   n_gpu_layers: number;
   temp: number;
