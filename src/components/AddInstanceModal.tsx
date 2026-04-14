@@ -75,6 +75,7 @@ const getDefaultConfig = (primary: PrimaryBackend, mode: string): Partial<Instan
       ...base,
       backend_type: 'llamacpp',
       model: '',
+      mmproj: '',
       alias: '',
       threads: 1,
       n_gpu_layers: 999,
@@ -207,6 +208,7 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
       if (!c.chat_template_kwargs) delete c.chat_template_kwargs;
       if (!c.reasoning) delete c.reasoning;
       if (!c.ot) delete c.ot;
+      if (!c.mmproj) delete c.mmproj;
       if (!c.pooling) delete c.pooling;
     }
 
@@ -377,6 +379,26 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                       className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
                     />
                   </div>
+
+                  {/* Multimodal projector (vision) — LLM only */}
+                  {llamaCppMode === 'llm' && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-nord-4 mb-1">
+                        Multimodal projector (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        name="mmproj"
+                        value={(formData as Partial<LlamaCppConfig>).mmproj || ''}
+                        onChange={handleChange}
+                        placeholder="/path/to/mmproj.gguf"
+                        className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 placeholder-nord-4 placeholder:opacity-60 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                      />
+                      <p className="text-xs text-nord-4 mt-1">
+                        Passed to llama-server as <code>--mmproj</code> for vision-capable models.
+                      </p>
+                    </div>
+                  )}
 
                   {/* Alias */}
                   <div className="md:col-span-2">

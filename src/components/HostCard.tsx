@@ -265,10 +265,10 @@ export function HostCard({
               </button>
               <Server size={24} />
               <div>
-                <h2 className="text-xl font-bold text-nord-6" title={host.url}>{host.name}</h2>
-                {host.version && (
-                  <p className="text-xs text-nord-4 opacity-70">v{host.version}</p>
-                )}
+                <h2 className="text-xl font-bold text-nord-6" title={host.url}>
+                  {host.name}
+                </h2>
+                {host.version && <p className="text-xs text-nord-4 opacity-70">v{host.version}</p>}
               </div>
             </div>
             <div className="flex items-center gap-2">
