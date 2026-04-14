@@ -400,6 +400,29 @@ export function AddInstanceModal({ hostId, hostName, onClose, onCreate }: AddIns
                     </div>
                   )}
 
+                  {/* Multimodal projector GPU offload — only when mmproj is set */}
+                  {llamaCppMode === 'llm' && (formData as Partial<LlamaCppConfig>).mmproj && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-nord-4 mb-1">
+                        Projector GPU Offload
+                      </label>
+                      <select
+                        name="mmproj_offload"
+                        value={(formData as Partial<LlamaCppConfig>).mmproj_offload === false ? 'false' : 'true'}
+                        onChange={(e) =>
+                          setFormData((prev) => ({ ...prev, mmproj_offload: e.target.value === 'true' }))
+                        }
+                        className="w-full px-3 py-2 bg-nord-2 border border-nord-3 text-nord-6 rounded-md focus:ring-2 focus:ring-nord-10 focus:border-transparent"
+                      >
+                        <option value="true">GPU (default)</option>
+                        <option value="false">CPU</option>
+                      </select>
+                      <p className="text-xs text-nord-4 mt-1">
+                        Where to run the multimodal projector. Disabling passes <code>--no-mmproj-offload</code>.
+                      </p>
+                    </div>
+                  )}
+
                   {/* Alias */}
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-nord-4 mb-1">

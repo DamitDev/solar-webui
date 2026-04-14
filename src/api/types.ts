@@ -29,6 +29,8 @@ export interface LlamaCppConfig extends BaseInstanceConfig {
   model: string;
   /** Path to multimodal projector GGUF (llama-server --mmproj) */
   mmproj?: string;
+  /** Whether to GPU-offload the multimodal projector (default: true) */
+  mmproj_offload?: boolean;
   threads: number;
   n_gpu_layers: number;
   temp: number;
