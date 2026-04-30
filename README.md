@@ -55,6 +55,9 @@ SOLAR_CONTROL_URL=http://localhost:8000
 # Management API key (solar-control). Required for REST and Socket.IO.
 SOLAR_CONTROL_API_KEY=your-solar-control-api-key
 
+# Optional: require a login key before serving the WebUI or proxying control requests
+# SOLAR_WEBUI_AUTH_KEY=your-webui-login-key
+
 # Optional: port for the middleware server (defaults to 8080)
 # PORT=8080
 
@@ -62,14 +65,15 @@ SOLAR_CONTROL_API_KEY=your-solar-control-api-key
 # SOLAR_WEBUI_DEBUG=true
 ```
 
-- **Production (Express server):** The server reads these at startup and (1) injects `X-API-Key` and `Authorization` on **every** proxied request and on **WebSocket upgrade** requests (so Socket.IO to solar-control is authenticated), and (2) injects `window.__SOLAR_CONFIG__ = { SOLAR_CONTROL_API_KEY: "..." }` into the served `index.html` so the client can send the key in Socket.IO `auth` as well. No build-time env vars are required in Docker.
-- **Development (Vite):** Use `VITE_SOLAR_CONTROL_API_KEY` in `.env` if you connect directly to solar-control; the dev server proxies `/api/control` and the client uses the key from Vite env or from the proxy.
+- **Production (Express server):** The server reads these at startup and (1) optionally gates the WebUI and `/api/control` proxy behind `SOLAR_WEBUI_AUTH_KEY`, (2) injects `X-API-Key` and `Authorization` on **every** proxied request and on **WebSocket upgrade** requests (so Socket.IO to solar-control is authenticated), and (3) injects `window.__SOLAR_CONFIG__ = { SOLAR_CONTROL_API_KEY: "..." }` into the served `index.html` so the client can send the key in Socket.IO `auth` as well. No build-time env vars are required in Docker.
+- **Development (Vite):** The dev server reads `SOLAR_CONTROL_URL`, `SOLAR_CONTROL_API_KEY`, and `SOLAR_WEBUI_AUTH_KEY` from `.env` or the shell. Use `VITE_SOLAR_CONTROL_API_KEY` only when the browser connects directly to solar-control; do not use a `VITE_` prefix for `SOLAR_WEBUI_AUTH_KEY` because that would expose the WebUI login key to the browser bundle.
 
 ### Performance and Auth
 
 The middleware server includes:
 - **HTTP Keep-Alive** - Reuses TCP connections to reduce latency (5-20ms vs 50-100ms)
 - **Connection Pooling** - Maintains up to 50 concurrent connections with 10 idle connections ready
+- **Optional WebUI auth** - Set `SOLAR_WEBUI_AUTH_KEY` to require a simple login before the SPA, REST proxy, or WebSocket proxy can be used. If unset, the WebUI keeps its previous open behavior.
 - **WebSocket upgrade auth** - The proxy’s `headers` option does not apply to WebSocket upgrades. The server explicitly sets `X-API-Key` and `Authorization` on the upgrade request before proxying, so solar-control can authenticate the Socket.IO connection.
 - **Runtime config injection** - In production, the server injects `window.__SOLAR_CONFIG__` into the HTML so the client gets the API key at runtime (works in Docker without build-time env).
 - **Compression** - Gzip compression for static assets
@@ -82,7 +86,7 @@ The middleware server includes:
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`. The dev server proxies `/api/control/*` and related WebSocket routes to `SOLAR_CONTROL_URL`, injecting the API key from your environment variables.
+The application will be available at `http://localhost:5173`. The dev server proxies `/api/control/*` and related WebSocket routes to `SOLAR_CONTROL_URL`, injecting the API key from your environment variables. If `SOLAR_WEBUI_AUTH_KEY` is set, the dev server uses the same login cookie gate as production.
 
 ## Production Deployment
 
@@ -94,6 +98,7 @@ The application will be available at `http://localhost:5173`. The dev server pro
 # Export the required variables (or place them in docker-compose.env)
 export SOLAR_CONTROL_URL=http://host.docker.internal:8015
 export SOLAR_CONTROL_API_KEY=your-solar-control-api-key
+export SOLAR_WEBUI_AUTH_KEY=your-webui-login-key  # optional
 export PORT=8080  # optional
 
 # Build and start
@@ -116,7 +121,7 @@ docker-compose down
 
 ```bash
 npm run build
-SOLAR_CONTROL_URL=http://localhost:8000 SOLAR_CONTROL_API_KEY=your-key npm start
+SOLAR_CONTROL_URL=http://localhost:8000 SOLAR_CONTROL_API_KEY=your-key SOLAR_WEBUI_AUTH_KEY=your-webui-login-key npm start
 ```
 
 This builds the React assets and launches the Node middleware (`npm start` is an alias for `npm run serve`). The middleware serves both static files and all API/WebSocket requests, so you do **not** need an additional reverse proxy unless you want TLS or custom routing. Changes to environment variables take effect on the next process restart.
