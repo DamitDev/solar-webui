@@ -379,8 +379,7 @@ export function ResourcesPage() {
               </span>
             </div>
             <p className="text-xs text-nord-4">
-              available = total − Σeffective · effective = max(actual, requested) (S-034/S-035) — values as reported by
-              the scheduler, never recomputed client-side
+              available = total − Σeffective · effective = max(actual, requested)
             </p>
           </div>
         </>
